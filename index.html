@@ -67,8 +67,8 @@
       <div><b>CLICK</b> begin</div>
     </div>
     <div class="begin" id="beginText">Click to step onto the quad</div>
-    <div class="places">MCGRAW TOWER · URIS LIBRARY · THE ARTS QUAD<br>
-      RISLEY HALL · SAGE CHAPEL · LIBE SLOPE · …and the tunnels below</div>
+    <div class="places">MCGRAW TOWER · THE GOULD READING ROOM · DUFFIELD ATRIUM<br>
+      SAGE CHAPEL · LIBE SLOPE · THE BIG RED BARN · HO PLAZA · and the tunnels below</div>
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -117,9 +117,11 @@ function terrainH(x,z){
   let h=0;
   if(x<-74) h-=26*smooth(-74,-165,x);
   if(z<-104) h-=24*smooth(-104,-126,z);
-  if(x>90) h-=6*smooth(90,140,x);            // dips east
+  if(x>120) h+=2*smooth(120,205,x);          // gentle rise east
   h+=Math.sin(x*0.11)*Math.cos(z*0.13)*0.22; // gentle undulation
-  if(x>-70&&x<70&&z>-100&&z<95) h=Math.sin(x*0.11)*Math.cos(z*0.13)*0.1; // keep campus flat-ish
+  if(x>-70&&x<120&&z>-100&&z<186) h=Math.sin(x*0.11)*Math.cos(z*0.13)*0.1; // campus stays flat-ish
+  {const cw=smooth(-36,-28,x)*(1-smooth(88,98,x));   // Cascadilla Gorge along the south boundary
+   if(cw>0) h-=9*(smooth(186,194,z)-smooth(202,212,z))*cw;}
   if(x>24.4&&x<33.5&&z>14.6&&z<17.4) h=-7.5;      // tunnel stairwell pits
   if(x>-6&&x<-2&&z>-64.2&&z<-56.6) h=-7.5;
   return h;
@@ -348,8 +350,8 @@ function pal(k){
 /* ============================== WORLD: GROUND ============================== */
 const B=new Builder();
 // world bounds (invisible)
-addSolid(-205,-10,-15,2,90,300); addSolid(115,-10,-15,2,90,300);
-addSolid(-45,-10,-152,340,90,2); addSolid(-45,-10,124,340,90,2);
+addSolid(-205,-10,31.5,2,90,374); addSolid(245,-10,31.5,2,90,374);
+addSolid(20,-10,-152,452,90,2); addSolid(20,-10,215,452,90,2);
 
 // tree positions decided before painting the ground (leaf litter goes under them)
 const TREES=[];
@@ -361,18 +363,33 @@ const TREES=[];
   for(let k=0;k<26;k++)TREES.push([rnd(-160,-84),rnd(-70,90)]);          // slope
   for(let k=0;k<12;k++)TREES.push([rnd(-60,90),rnd(-100,-64)]);          // toward Risley/gorge
   for(let k=0;k<10;k++)TREES.push([rnd(8,95),rnd(30,100)]);              // near Sage
+  for(let k=0;k<14;k++)TREES.push([rnd(-44,10),rnd(96,180)]);            // law quad + engineering
+  for(let k=0;k<12;k++)TREES.push([rnd(10,86),rnd(96,182)]);
+  for(let k=0;k<14;k++)TREES.push([rnd(46,120),rnd(-58,26)]);            // East Avenue corner
+  for(let k=0;k<8;k++)TREES.push([rnd(120,200),rnd(-60,180)]);           // far east meadow
+  for(let k=0;k<8;k++)TREES.push([rnd(-30,88),rnd(178,186)]);            // Cascadilla rim
+  TREES.push([-51,104],[-49,105.5]);                                     // Purcell courtyard pair
 }
-const inBuilding=(x,z)=>
-  (x>-79&&x<-33&&z>16&&z<44)||(x>-59&&x<-45&&z>-13&&z<1)||   // Uris, McGraw
-  (x>26&&x<46&&z>42&&z<82)||(x>-16&&x<32&&z>-95&&z<-73)||    // Sage, Risley
-  (x>20&&x<32&&z>10&&z<22)||(x>-10&&x<2&&z>-74&&z<-62);      // tunnel huts
+// every building footprint, used to prune trees and grass tufts
+const BRECTS=[
+  [-79,16,-33,44],[-59,-13,-45,1],[26,42,46,82],[-16,-95,32,-73],       // Uris, McGraw, Sage, Risley
+  [20,10,32,22],[-10,-74,2,-62],                                         // tunnel huts
+  [-76,46,-46,74],[-42,72,-28,86],[-74,88,-38,120],[-36,90,-10,118],[-22,122,6,144], // Straight, Store, Myron, Anabel, Olin chem
+  [6,124,24,140],[34,106,56,126],[34,124,58,156],[34,154,60,172],        // Carpenter, Phillips, Duffield, Upson
+  [58,148,76,170],[-2,154,36,170],[-2,170,20,186],[22,170,42,186],[60,104,82,128], // Grumman/Rhodes, KTB, Hollister, Snee, Gates
+  [54,26,74,44],[54,44,78,72],[84,28,118,64],[56,6,70,24],               // Day, Statler, Barton, Uris Hall
+  [84,-16,102,2],[50,-56,64,-40],[68,-56,80,-42],[84,-42,104,-22],       // Rockefeller, ADWhite House, Barn, Bailey
+  [-74,-46,-60,-30],[-74,-24,-60,-8],[-74,-6,-60,10],                    // Old Stone Row
+  [-28,-68,28,-50],[-46,-64,-32,-50],[30,-62,48,-46],[50,-22,76,4],      // Sibley, Tjaden, Lincoln, Goldwin
+  [40,14,54,28],[-30,46,-2,64]];                                          // Stimson, Olin Library
+const inBuilding=(x,z)=>{for(const[a,b,c,d]of BRECTS)if(x>a&&x<c&&z>b&&z<d)return true;return false;};
 for(let k=TREES.length-1;k>=0;k--){const[x,z]=TREES[k];
   if(inBuilding(x,z)||(Math.abs(x)<10&&Math.abs(z)<10))TREES.splice(k,1);}
 
 // ---- painted ground texture (grass, paths, rock, leaf litter) ----
 const GW=2048,GH=1664,gc=document.createElement('canvas');gc.width=GW;gc.height=GH;
 const g2=gc.getContext('2d');
-const gx=x=>(x+240)/360*GW, gz=z=>(z+160)/290*GH, gs=m=>m/360*GW; // meters→px
+const gx=x=>(x+240)/490*GW, gz=z=>(z+160)/380*GH, gs=m=>m/490*GW; // meters to px
 g2.fillStyle='#697538';g2.fillRect(0,0,GW,GH);
 for(let k=0;k<9000;k++){ // mottled autumn turf, greener per the reference photos
   const c=['#71803f','#657236','#7c8444','#5d6b31','#7d7a3c','#556327'][k%6];
@@ -414,7 +431,7 @@ for(const[tx,tz]of TREES)for(let k=0;k<26;k++){
 g2.globalAlpha=1;
 const groundTex=new THREE.CanvasTexture(gc);groundTex.colorSpace=THREE.SRGBColorSpace;
 groundTex.anisotropy=8;
-{const geo=new THREE.PlaneGeometry(360,290,190,150);geo.rotateX(-Math.PI/2);geo.translate(-60,0,-15);
+{const geo=new THREE.PlaneGeometry(490,380,235,180);geo.rotateX(-Math.PI/2);geo.translate(5,0,30);
  const pos=geo.attributes.position;
  for(let k=0;k<pos.count;k++)pos.setY(k,terrainH(pos.getX(k),pos.getZ(k)));
  geo.computeVertexNormals();
@@ -445,7 +462,9 @@ for(const[x,z]of TREES)tree(x,z);
 const LAMPS=[];
 {const spots=[[-30,-22],[30,-22],[-30,22],[30,22],[2.5,-46],[2.5,46],[-56,2.5],[58,2.5],
   [-30,33.5],[-44,-14],[26,38],[32.8,41.5],[10,-58],[-4,-72],[4,-72],[22,10],
-  [-82,6],[-104,20],[-126,26],[-148,16],[-168,2],[-96,-14],[64,-44],[64,44],[-66,-44]];
+  [-82,6],[-104,20],[-126,26],[-148,16],[-168,2],[-96,-14],[64,-44],[64,44],[-66,-44],
+  [-36.8,50],[-29.6,50],[-34.4,62],[-27.2,62],[-32,74],[-24.8,74],[-29.8,86],[-22.6,86],  // Ho Plaza pairs
+  [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76]];                      // Campus Road + the law court
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
@@ -1052,7 +1071,7 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
   B.box(-19.02,1.5,-2,0.1,0.42,0.68,0xffd9a0,{ch:'glowNight'});                // statue plaques
   B.box(19.02,1.5,-2,0.1,0.42,0.68,0xffd9a0,{ch:'glowNight'});
 }
-{ // PASS 4: people on the slope (and a few on the quad), per the reference photos
+// PASS 4: people helpers (module scope) + the slope crowd
   const SKIN=[0xd8b090,0xc89878,0xa87858,0x8a6848],
         SHIRT=[0x8a2430,0x2c4a7a,0xd8cfc0,0x3a6b48,0xc9a13a,0x6a4a8a,0xb31b1b,0x33383f],
         PANTS=[0x2a3038,0x5a4a3a,0x3d4a5c,0x23262c];
@@ -1096,7 +1115,6 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
       B.sph(bx+rnd(-2.6,2.6),by+5.8+dy2,bz+rnd(-2.6,2.6),rnd(4.2,5.8),
         C(k%3?bc:0xdca02c).multiplyScalar(0.7+0.3*(dy2/4.5)),{sy:0.8});}
   }
-}
 { // PASS 4: reading-room furnishings — crimson wing chairs, display cases, arched end window
   const VELVET=0x7c2028,DK=0x3c2c1e;
   function wingChair(x,z,ry){
@@ -1119,6 +1137,209 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
      B.box(ax+0.06,y2,30,0.36,0.36,w2,0xfff2dc,{ch:'glowAlways'});
    B.box(ax,7.3,30,0.3,0.5,2.0,0xc6b89a);}
 }
+/* ============================== EXPANSION HELPERS ============================== */
+function pane(x,y,z,w,h,ry,ch='glowNight',glass=0xffd9a0){   // cheap glowing window, dark frame
+  B.box(x,y,z,w,h,0.12,0x2c2824,{ry});
+  B.box(x,y,z,w-0.18,h-0.18,0.2,glass,{ry,ch});
+}
+function paneRow(cx,cy,cz,ry,n,pitch,w,h,ch,glass){          // n panes spread along the wall
+  const c=Math.cos(ry),s=Math.sin(ry);
+  for(let k=0;k<n;k++){const lc=(k-(n-1)/2)*pitch;
+    pane(cx+lc*c,cy,cz-lc*s,w,h,ry,ch,glass);}
+}
+function crenel(cx,cy,cz,len,alongX,color,pitch=1.6){        // battlement merlons
+  for(let l=-len/2;l<=len/2;l+=pitch)
+    B.box(cx+(alongX?l:0),cy,cz+(alongX?0:l),alongX?0.8:0.6,0.6,alongX?0.6:0.8,color);
+}
+function quoins(x,z,h,color){for(let y=0.7;y<h;y+=1.3)B.box(x,y,z,0.9,0.6,0.9,color);}
+
+/* ============================== PHASE A: HO PLAZA + THE LAW QUAD ============================== */
+{ // Ho Plaza furniture: benches and banners (paving is painted below)
+  bench(-35.6,54,1.35);bench(-28.5,66,-1.6);bench(-30,80,1.5);
+  for(const[bx,bz]of[[-33.6,52],[-27.8,76]]){
+    B.cyl(bx,3.4,bz,0.06,0.09,6.8,6,0x22252c,{solid:true});
+    B.box(bx+0.03,5.3,bz,0.07,2.6,0.9,0xb31b1b);
+    B.box(bx+0.04,6.35,bz,0.08,0.5,0.95,0xe8dcc0);}
+  person(-30.5,64,'stand',1.1);person(-31.4,64.7,'stand',-2.0);person(-27,82,'stand',0.4);
+}
+{ // Willard Straight Hall, the Straight
+  const X0=-74,X1=-48,Z0=48,Z1=72,MX=-61,MZ=60,H=12;
+  const LLEN=0x74695a,LIME=0xcfc4a8,SLATE=0x4c4f58;
+  wallD(MX,0,Z0+0.5,X1-X0,H,1,0,LLEN);
+  wallD(MX,0,Z1-0.5,X1-X0,H,1,0,LLEN);
+  wallD(X0+0.5,0,MZ,Z1-Z0,H,1,Math.PI/2,LLEN);
+  wallD(X1-0.5,0,MZ,Z1-Z0,H,1,Math.PI/2,LLEN,{off:0,w:2.6,h:3.6});   // east door onto Ho Plaza
+  B.box(MX,0.2,MZ,X1-X0-1.4,0.4,Z1-Z0-1.4,0x6a5c4a,{solid:true});    // floor
+  B.box(X1+0.7,0.09,MZ,1.4,0.18,4.2,0x9b917d,{solid:true});          // entry step
+  B.box(MX,H+0.25,MZ,X1-X0+0.9,0.5,Z1-Z0+0.9,LIME);                  // cornice
+  crenel(MX,H+0.8,Z0-0.1,X1-X0,true,LIME,2.0);crenel(MX,H+0.8,Z1+0.1,X1-X0,true,LIME,2.0);
+  B.wedge(MX,H+0.5,MZ,X1-X0-3,5.4,Z1-Z0-3,SLATE);                    // steep slate roof
+  B.box(MX,4.9,MZ,X1-X0+0.12,0.35,Z1-Z0+0.12,LIME);                  // limestone band
+  quoins(X0+0.45,Z0+0.45,H,LIME);quoins(X0+0.45,Z1-0.45,H,LIME);
+  B.box(-51,9,51.5,6,18,6,LLEN,{solid:true});                        // short square tower, NE corner
+  B.box(-51,18.4,51.5,6.6,0.5,6.6,LIME);
+  crenel(-51,19,48.7,6,true,LIME,1.5);crenel(-51,19,54.3,6,true,LIME,1.5);
+  crenel(-53.8,19,51.5,5,false,LIME,1.5);crenel(-48.2,19,51.5,5,false,LIME,1.5);
+  paneRow(-51,14.5,48.4,0,2,2.4,1.1,2.6);
+  paneRow(X0-0.12,3.6,MZ,Math.PI/2,6,3.6,1.7,3.4);                   // two-story arches over the slope
+  paneRow(X0-0.12,8.4,MZ,Math.PI/2,6,3.6,1.5,3.0);
+  paneRow(X1+0.12,4.0,MZ+6.8,Math.PI/2,3,3.2,1.5,3.0);
+  paneRow(X1+0.12,4.0,MZ-6.8,Math.PI/2,3,3.2,1.5,3.0);
+  paneRow(MX,8.6,Z0-0.12,0,6,3.8,1.5,2.8);paneRow(MX,8.6,Z1+0.12,0,6,3.8,1.5,2.8);
+  B.box(X1+0.14,4.5,MZ,3.4,1.2,0.5,LIME);                            // door hood
+  // the Memorial Room
+  for(let bx=X0+3;bx<X1-1;bx+=3.4)B.box(bx,9.4,MZ,0.55,0.7,Z1-Z0-2.2,0x3a2c1e);
+  B.box(MX,9.9,MZ,X1-X0-2,0.3,Z1-Z0-2,0x4a3828);                     // dark timber ceiling
+  for(const dz of[-6.5,0,6.5]){                                      // tall west windows, interior faces
+    B.box(X0+1.02,5.4,MZ+dz,0.12,6.8,2.8,0x3a3630);
+    B.box(X0+1.06,5.4,MZ+dz,0.2,6.4,2.4,0xffe6c4,{ch:'glowAlways'});}
+  B.box(MX,1.8,Z0+1.3,4.6,3.6,1.4,0x5c5248,{solid:true});            // fireplace
+  B.box(MX,1.0,Z0+1.95,2.4,1.9,0.4,0x17110c);
+  B.box(MX,0.72,Z0+2.0,2.0,1.2,0.35,0xff9838,{ch:'glowAlways'});
+  B.box(MX,4.0,Z0+1.2,5.4,0.8,1.6,LIME);
+  for(const[fx,fz,r]of[[-64,57.5,0],[-64,64.5,Math.PI],[-57.5,57.5,0],[-57.5,64.5,Math.PI],
+                       [-68,52.5,Math.PI/2],[-53,67,0],[-53,54,Math.PI]]){
+    B.box(fx,0.62,fz,2.4,0.5,1.0,0x5a3a26,{ry:r,solid:true});        // leather sofas
+    B.box(fx-Math.sin(r)*0.55,1.12,fz-Math.cos(r)*0.55,2.4,0.7,0.16,0x5a3a26,{ry:r});}
+  B.box(-61,0.42,61,7,0.03,7,0x6e1f1c);B.box(-53,0.42,64.6,5,0.03,4.6,0x24427c);  // rugs
+  B.box(-61,0.75,61,2.2,0.5,1.1,0x3c2c1e,{solid:true});              // low table
+  B.box(-53,0.98,64.6,4.6,0.1,1.4,0x53391f,{solid:true});            // refectory table, off the door axis
+  for(const dx of[-1.9,1.9])B.box(-53+dx,0.5,64.6,0.16,0.9,1.2,0x3c2c1e);
+  for(const dz of[-1.1,1.1])for(const dx of[-1.4,0,1.4])
+    B.box(-53+dx,0.6,64.6+dz,0.48,0.08,0.48,0x3c2c1e,{solid:true});
+  for(const gz2 of[52,60,68]){                                       // wall sconce pairs
+    B.box(-72.6,4.4,gz2,0.14,0.28,0.14,0xffc36a,{ch:'glowAlways'});
+    B.box(-49.6,4.4,gz2,0.14,0.28,0.14,0xffc36a,{ch:'glowAlways'});}
+  B.box(-61,2.6,49.15,20,3.2,0.14,0x4a3626);                          // north wainscot
+  person(-57.5,58.6,'sit',Math.PI);person(-64,63.4,'sit',0);
+  person(-53.4,63.4,'sit',Math.PI);person(-68.5,53.6,'sit',Math.PI/2);person(-55,70,'stand',2.4);
+}
+{ // Cornell Store
+  const X1=-30,MX=-35,MZ=79,H=4.6,BR=0x8a4636;
+  B.box(MX,H/2,MZ,10,H,10,BR,{solid:true});
+  B.box(MX,H+0.15,MZ,10.5,0.3,10.5,0xcfc4a8);
+  B.box(X1+0.1,2.0,MZ,0.2,2.4,7.6,0xd8bf92,{ch:'glowNight'});        // glowing shopfront
+  for(const dz of[-2.6,0,2.6])B.box(X1+0.35,3.3,MZ+dz,0.24,0.5,2.4,0x2c2824);  // mullions
+  for(const dz of[-3,0,3])B.box(X1+0.45,3.55,MZ+dz,1.0,0.12,2.6,0xb32020,{rz:-0.35});
+  B.box(X1+0.12,4.15,MZ,0.18,0.5,6.5,0xb32020);                      // sign band
+  B.box(X1+0.16,4.15,MZ,0.16,0.28,5.2,0xd8bf92,{ch:'glowNight'});
+}
+{ // Myron Taylor Hall, Cornell Law School, U-shaped around Purcell Courtyard
+  const X0=-72,X1=-40,ST=0x8d8272,LIME=0xcfc4a8,SLATE=0x4c4f58;
+  const NZ0=90,NZ1=100;
+  wallD(-56,0,NZ0+0.5,X1-X0,10,1,0,ST,{off:10,w:2.4,h:3.2});         // north face, door at x -46
+  wallD(-56,0,NZ1-0.5,X1-X0,10,1,0,ST,{off:6,w:2.2,h:3.0});          // south face, courtyard door at x -50
+  wallD(X0+0.5,0,95,10,10,1,Math.PI/2,ST);
+  wallD(X1-0.5,0,95,10,10,1,Math.PI/2,ST);
+  B.box(-56,0.2,95,X1-X0-1.6,0.4,8,0x6a5c4a,{solid:true});           // Gould floor
+  B.box(-45.5,0.09,88.9,3.2,0.18,2.2,0x9b917d,{solid:true});         // north entry step
+  B.wedge(-56,10.3,95,X1-X0+0.8,4.6,10.8,SLATE);
+  for(const by of[4.2,8.2])B.box(-56,by,95,X1-X0+0.1,0.3,10.1,LIME); // limestone bands
+  B.box(-67,6,109,10,12,18,ST,{solid:true});                          // west spine
+  B.wedge(-67,12,109,18.8,4.2,10.6,SLATE,{ry:Math.PI/2});
+  B.box(-59,6,113,26,12,10,ST,{solid:true});                          // south wing, U opens east
+  B.wedge(-59,12,113,26.8,4.2,10.8,SLATE);
+  paneRow(-67,4.6,109,Math.PI/2,4,4.0,1.5,3.0);paneRow(-59,4.6,108.4,0,5,4.4,1.5,3.0);
+  paneRow(-59,8.9,117.9,0,5,4.4,1.4,2.4);
+  const PTX=-41,PTZ=93;                                               // the Peace Tower
+  B.box(PTX,12,PTZ,6,24,6,ST,{solid:true});
+  B.box(PTX,24.3,PTZ,6.8,0.6,6.8,LIME);
+  crenel(PTX,24.9,PTZ-3.2,6,true,LIME,1.4);crenel(PTX,24.9,PTZ+3.2,6,true,LIME,1.4);
+  crenel(PTX-3.2,24.9,PTZ,5.2,false,LIME,1.4);crenel(PTX+3.2,24.9,PTZ,5.2,false,LIME,1.4);
+  for(let k=0;k<4;k++)B.box(PTX-2.2+k*1.45,21.6,PTZ-3.06,0.7,1.3,0.25,LIME);  // carved figures
+  paneRow(PTX,16,PTZ-3.1,0,2,2.0,0.9,3.2);paneRow(PTX,10,PTZ-3.1,0,2,2.0,0.9,3.2);
+  // ---- The Gould Reading Room, the law library ----
+  {const GX0=-70,GX1=-44,GZC=95;
+   for(const s of[-1,1])B.box(-57,8.9,GZC+s*2.2,GX1-GX0+0.5,0.24,5.0,0xe4d7bd,{rx:s*0.42});
+   for(let bx=GX0+1.6;bx<=GX1-1.6;bx+=3.2)for(const s of[-1,1])
+     B.box(bx,8.75,GZC+s*2.1,0.4,0.3,4.6,0x3a2c1e,{rx:s*0.42});
+   B.box(-57,10.05,GZC,GX1-GX0+0.5,0.3,0.7,0x3a2c1e);                 // ridge beam
+   for(let wx=GX0+2.6;wx<=GX1-2.6;wx+=3.4){                            // arched lancets, both long sides
+     gwin(wx,5.6,NZ0-0.12,1.6,5.8,0);gwin(wx,5.6,NZ1+0.12,1.6,5.8,0);
+     B.box(wx,5.4,NZ0+1.02,1.6,5.6,0.12,0x3a3630);B.box(wx,5.4,NZ1-1.02,1.6,5.6,0.12,0x3a3630);
+     B.box(wx,5.4,NZ0+1.06,1.36,5.3,0.2,0xe4cfa4,{ch:'glowAlways'});
+     B.box(wx,5.4,NZ1-1.06,1.36,5.3,0.2,0xe4cfa4,{ch:'glowAlways'});
+     B.box(wx,8.5,NZ0+1.06,0.9,0.66,0.22,0xe4cfa4,{ch:'glowAlways'});
+     B.box(wx,8.5,NZ1-1.06,0.9,0.66,0.22,0xe4cfa4,{ch:'glowAlways'});}
+   for(const px of[-64.9,-58.1,-51.3]){                                // portraits between windows
+     B.box(px,4.7,NZ0+1.04,1.5,1.9,0.14,0x241d12);
+     B.box(px,4.7,NZ0+1.08,1.2,1.6,0.12,[0x54432e,0x3d4a5c,0x5c4a56][((px+70)/6|0)%3]);}
+   for(const bz of[NZ0+1.35,NZ1-1.35]){                                // floor bookcases, gap at the north door
+     const bx1=bz<GZC?GX1-4.5:GX1-1.5;
+     B.box((GX0+1.5+bx1)/2,1.15,bz,bx1-GX0-1.5,2.3,0.5,0x4a3826,{solid:true});
+     for(const sy of[0.75,1.35,1.95])bookRun(GX0+1.5,bx1,sy-0.28,bz+(bz<GZC?0.32:-0.32));}
+   B.box(-57,0.43,GZC,GX1-GX0-1,0.04,2.2,0x8c1f1e,{solid:true});      // crimson runner
+   for(const tx of[-66,-59,-52]){                                      // long oak tables, brass lamps
+     B.box(tx,1.06,GZC,5.4,0.1,1.6,0x6a4c2c,{solid:true});
+     for(const dx of[-2.3,2.3])B.box(tx+dx,0.55,GZC,0.14,1.0,1.4,0x53391f);
+     for(const dx of[-1.8,0,1.8]){B.cyl(tx+dx,1.25,GZC,0.03,0.05,0.3,5,0x8a5a28);
+       B.box(tx+dx,1.44,GZC,0.38,0.15,0.22,0xffd27a,{ch:'glowAlways'});}
+     for(const dz of[-1.3,1.3])for(const dx of[-1.7,0,1.7]){
+       B.box(tx+dx,0.62,GZC+dz,0.5,0.08,0.5,0x53391f,{solid:true});
+       B.box(tx+dx,1.0,GZC+dz*1.16,0.5,0.8,0.08,0x53391f);}}
+   person(-59,96,'sit',0);person(-66,94,'sit',Math.PI);
+  }
+  // Purcell Courtyard dressing
+  bench(-49,102,0);bench(-53,106.5,Math.PI);
+}
+{ // Anabel Taylor Hall + interfaith chapel wing
+  const X0=-34,X1=-12,Z0=92,Z1=116,ST=0x8d8272,LIME=0xcfc4a8,SLATE=0x4c4f58;
+  wallD(-23,0,Z0+0.5,X1-X0,11,1,0,ST);
+  wallD(-23,0,Z1-0.5,X1-X0,11,1,0,ST);
+  wallD(X1-0.5,0,104,Z1-Z0,11,1,Math.PI/2,ST);
+  wallD(X0+0.5,0,104,Z1-Z0,11,1,Math.PI/2,ST,{off:-8,w:2.2,h:3.0});  // west door at z 112
+  B.box(-23,0.15,104,X1-X0-1.6,0.3,Z1-Z0-1.6,0x6a5c4a,{solid:true});
+  B.wedge(-23,11.2,104,Z1-Z0+0.8,4.4,X1-X0+0.8,SLATE,{ry:Math.PI/2});
+  B.box(-23,11.1,104,X1-X0+0.6,0.4,Z1-Z0+0.6,LIME);
+  B.box(-31.5,8,94.5,5,16,5,ST,{solid:true});                        // its own shorter tower
+  B.box(-31.5,16.3,94.5,5.7,0.5,5.7,LIME);
+  crenel(-31.5,16.9,92.2,5,true,LIME,1.4);crenel(-31.5,16.9,96.8,5,true,LIME,1.4);
+  paneRow(-31.5,12.5,92.15,0,2,1.9,0.9,2.6);
+  paneRow(-20,4.2,Z0-0.12,0,4,4.0,1.5,3.0);paneRow(-23,8.3,Z0-0.12,0,5,4.0,1.3,2.2);
+  paneRow(X1+0.12,4.6,104,Math.PI/2,5,4.4,1.5,3.0);
+  stained(-28,4.9,Z1-0.5,2.0,4.2,0,171);stained(-18,4.9,Z1-0.5,2.0,4.2,0,183);  // chapel glass
+  // the quiet chapel, south end
+  for(let pz=106;pz<=111;pz+=1.7){
+    B.box(-23,0.62,pz,5.2,0.1,0.5,0x4a3626,{solid:true});
+    B.box(-23,1.0,pz+0.32,5.2,0.75,0.1,0x3c2c1e);}
+  B.box(-23,0.95,113.6,2.2,0.75,0.9,0x5c3a28,{solid:true});          // altar table
+  for(const cx of[-24.1,-21.9])B.box(cx,1.5,113.6,0.08,0.16,0.08,0xffc36a,{ch:'glowAlways'});
+  B.box(-23,0.34,109,1.8,0.04,9,0x6e1f1c);                           // runner
+  person(-21.2,107.7,'sit',Math.PI);
+}
+{ // Olin Hall, chemical engineering, brick Art Deco
+  const X0=-20,X1=4,Z0=124,Z1=142,BR=0x8a5a42,LIME=0xcfc4a8,MX=-8,H=14;
+  B.box(MX,H/2,133,X1-X0,H,Z1-Z0,BR,{solid:true});
+  B.box(MX,H+0.2,133,X1-X0+0.6,0.4,Z1-Z0+0.6,LIME);                  // parapet
+  for(let wx=X0+2.6;wx<=X1-2.6;wx+=3.2){                              // vertical window bays
+    B.box(wx,H/2+0.6,Z0-0.08,1.3,H-3.4,0.2,0x241f1a);
+    B.box(wx,H/2+0.6,Z0-0.1,1.05,H-3.8,0.26,0xffe0b0,{ch:'glowNight'});
+    B.box(wx,H/2+0.6,Z1+0.08,1.3,H-3.4,0.2,0x241f1a);
+    B.box(wx,H/2+0.6,Z1+0.1,1.05,H-3.8,0.26,0xffe0b0,{ch:'glowNight'});}
+  for(const ex of[-14,-2]){                                           // entrances with carved emblems
+    B.box(ex,1.7,Z0-0.4,2.6,3.4,0.8,LIME,{solid:true});
+    B.box(ex,1.55,Z0-0.62,1.7,3.1,0.5,0x241f1a);
+    B.box(ex,4.15,Z0-0.5,1.5,1.4,0.4,LIME);
+    B.box(ex,0.08,Z0-1.3,3.4,0.16,1.8,0x9b917d,{solid:true});}
+}
+{ // Phase A paving
+  path([[-34,46],[-30,66],[-26,88]],8,'#b3a68e');                     // Ho Plaza spine
+  path([[-26,88],[-45,88.6]],3,'#b3a68e');                            // spur to the law school door
+  path([[-40,121],[90,121]],6,'#8a8274');                             // Campus Road
+  g2.fillStyle='#e8e2d2';
+  for(let k=0;k<5;k++)g2.fillRect(gx(-30+k*1.6),gz(118.7),gs(0.9),gz(123.3)-gz(118.7));  // crosswalk
+  path([[-37,90],[-37,104],[-35,112]],2.4);                           // court walk to Anabel
+  path([[-51,100.5],[-51,107.5]],2,'#9b917d');path([[-45,104],[-57,104]],2,'#9b917d');   // Purcell cross
+  path([[-26,88],[-26,118],[-10,121]],3.4,'#a79c86');                 // plaza down to Campus Road
+  g2.fillStyle='#9b917d';
+  for(const[px,pz,r]of[[-46,60,3],[-46,89,2.6],[-50,101.5,2.4],[-35,112,2.4],[-31,79,2.6]])
+    {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
+  groundTex.needsUpdate=true;
+}
+window.__routes.hoPlaza=[[0,40],[-14,44],[-26,58],[-27,72],[-26,86]];
+window.__routes.straight=[[-26,60],[-40,60],[-46,60],[-52,60],[-58,60]];
+window.__routes.gould=[[-26,86],[-38,87.5],[-46,88.4],[-46,91.8],[-50,92.6],[-58,92.6]];
+window.__routes.anabel=[[-26,86],[-37,91],[-37,109],[-35.5,112],[-31,112],[-24,112]];
 const tmpW=new THREE.Color(0xffffff);
 const CLOUDS=[];
 for(let k=0;k<9;k++){
@@ -1165,6 +1386,10 @@ const PL=[
   plight(36,3.8,77.4,0xffc873,26,17,{fl:0.07}),                     // sage: apse uplight
   plight(36,7.3,77.8,0xffd9a0,11,11),                               // sage: dome wash
   plight(36,8.0,55,0xffcf9a,8,18), plight(36,8.0,69,0xffcf9a,8,18), // sage: nave warmth
+  plight(-61,3.2,50.6,0xff9a4a,26,18,{fl:0.28}),                    // the Straight: fireplace
+  plight(-58,6.5,62,0xffd9a0,26,27),                                // Memorial Room wash
+  plight(-60,6.8,95,0xffe0b8,22,20), plight(-50,6.8,95,0xffe0b8,22,20), // Gould pools
+  plight(-23,4.2,110,0xffc98a,12,14),                               // Anabel chapel
   plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'}), plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'})];
 
 /* ============================== SHAFTS / BIRDS / LEAVES ============================== */
@@ -1188,6 +1413,8 @@ shaft(-60,9.1,30,-58.8,0.4,30,2.6,'z',0xfff0d0,'RR');
 shaft(-50,9.1,30,-51.2,0.4,30,2.6,'z',0xfff0d0,'RR');
 shaft(-75.7,8.6,30,-66,0.4,30,4.6,'z',0xffe2ae,'W');   // the great west window pours in at sunset
 shaft(-75.7,6.0,30,-69,0.4,30,3.2,'z',0xffd9a0,'RR');
+shaft(-64,8.2,99,-64,0.4,93.6,2.2,'x',0xffe2ae,'S');   // Gould Reading Room, south glass
+shaft(-52,8.2,99,-52,0.4,93.6,2.2,'x',0xffe2ae,'S');
 const BIRDS=[];
 {const g=new THREE.BufferGeometry();
  g.setAttribute('position',new THREE.Float32BufferAttribute(
@@ -1220,6 +1447,11 @@ const AREAS=[
   {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
   {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
   {name:'Libe Slope',sub:'far above Cayuga’s waters',test:p=>p.x<-72},
+  {name:'The Gould Reading Room',sub:'Cornell Law Library',test:p=>p.x>-71&&p.x<-41&&p.z>89&&p.z<101},
+  {name:'Willard Straight Hall',sub:'the Straight',test:p=>p.x>-75&&p.x<-47&&p.z>47&&p.z<73},
+  {name:'Anabel Taylor Hall',sub:'one quiet room for everyone',test:p=>p.x>-35&&p.x<-11&&p.z>91&&p.z<117},
+  {name:'Myron Taylor Hall',sub:'the law quad',test:p=>p.x>-73&&p.x<-39&&p.z>89&&p.z<119},
+  {name:'Ho Plaza',sub:'crossroads of the Hill',test:p=>p.x>-42&&p.x<-20&&p.z>44&&p.z<90},
   {name:'The Arts Quad',sub:'Ezra and A.D. keep watch',test:p=>p.x>-68&&p.x<68&&p.z>-50&&p.z<50},
   {name:'Central Campus',sub:'Ithaca, New York',test:()=>true}];
 let curArea='',labelTimer=0,chimed=false;
@@ -1269,7 +1501,7 @@ function step(){
   if(started)dayT=(dayT+dt/(night?190:340))%1;
   const ang=dayT*Math.PI*2,el=Math.sin(ang);
   sunDirV.set(Math.cos(ang),el,0.32).normalize();
-  const PAL=pal(el),glowF=1-smooth(-0.12,0.06,el),dayF=smooth(-0.05,0.25,el);
+  const PAL=pal(el),glowF=1-smooth(-0.08,0.18,el),dayF=smooth(-0.05,0.25,el);
   const ug=1-smooth(-2.5,-0.5,P.pos.y);                       // underground factor
   skyU.top.value.copy(asCol(PAL.top));skyU.hor.value.copy(asCol(PAL.hor));
   skyU.sunCol.value.copy(asCol(PAL.sun));skyU.sunDir.value.copy(sunDirV);
