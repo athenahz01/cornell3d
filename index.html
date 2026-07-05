@@ -466,7 +466,8 @@ const LAMPS=[];
   [-36.8,50],[-29.6,50],[-34.4,62],[-27.2,62],[-32,74],[-24.8,74],[-29.8,86],[-22.6,86],  // Ho Plaza pairs
   [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76],                        // Campus Road + the law court
   [28.5,127],[12,145],[30,152],[24,166],[48,143],[62,118.5],                                // Engineering Quad
-  [-26.6,187],[-21.4,211]];                                                                 // Cascadilla bridge
+  [-26.6,187],[-21.4,211],                                                                  // Cascadilla bridge
+  [83.5,100],[83.5,60],[83.5,20],[83.5,-20],[83.5,-48],[64,-41]];                           // East Avenue + Barn
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
@@ -1494,6 +1495,121 @@ function quoins(x,z,h,color){for(let y=0.7;y<h;y+=1.3)B.box(x,y,z,0.9,0.6,0.9,co
     s.scale.setScalar(rnd(7,13));scene.add(s);
     FOGS.push({s,x0:-20,x1:84,z0:192,z1:205,fy:-6,vx:rnd(0.5,1.2),vz:rnd(0.2,0.6),o:rnd(0.12,0.28),ph:rnd(9)});}
 }
+/* ============================== PHASE D: EAST AVENUE + THE GRADUATE CORNER ============================== */
+{ // Day Hall: stripped classical limestone
+  const MX=64,MZ=35,H=12,LIME=0xdcd6c4;
+  B.box(MX,H/2,MZ,20,H,18,LIME,{solid:true});
+  B.box(MX,H+0.2,MZ,20.5,0.4,18.5,0xc4bda8);
+  for(let px=56;px<=72;px+=2.6)B.box(px,H/2,25.9,1.1,H-2,0.18,0xcfc8b4);   // pilaster relief
+  paneRow(MX,3.4,25.85,0,5,3.4,1.5,2.6);paneRow(MX,8,25.85,0,5,3.4,1.4,2.2);
+  B.box(MX,1.9,25.5,3,3.8,0.6,0xc4bda8,{solid:true});B.box(MX,1.75,25.2,1.9,3.5,0.4,0x241f1a);
+  for(const fx of[61,67]){B.cyl(fx,3.6,24.6,0.05,0.07,7.2,5,0x22252c,{solid:true});
+    B.box(fx+0.35,6.2,24.6,0.7,0.5,0.06,0xb31b1b);}                         // flags
+}
+{ // Statler Hall + the hotel tower
+  const LIME=0xcfc8b4;
+  B.box(66,4,60,24,8,24,LIME,{solid:true});                                 // academic base
+  B.box(66,9,60,24.2,2,24.2,0x8a4636);                                      // brick top floor
+  paneRow(66,3.2,47.9,0,6,3.6,1.6,2.2);paneRow(66,9,47.9,0,6,3.6,1.5,1.6,'glowNight');
+  const TX=65,TZ2=50;                                                        // the tower
+  B.box(TX,13,TZ2,10,26,8,LIME,{solid:true});
+  for(let fy=11;fy<25;fy+=2.6)for(const dx of[-3.2,-1.1,1.1,3.2])
+    B.box(TX+dx,fy,TZ2-4.06,1.4,1.7,0.14,0xffd9a0,{ch:'glowNight'});        // lit hotel grid
+  B.box(TX,26.2,TZ2,10.5,0.5,8.5,0xc4bda8);
+}
+{ // Barton Hall: the castle
+  const X0=84,X1=118,Z0=28,Z1=64,MX=101,MZ=46,H=12,ST=0x9c9483;
+  B.box(MX,H/2,MZ,X1-X0,H,Z1-Z0,ST,{solid:true});
+  B.wedge(MX,H,MZ,X1-X0+1,7,Z1-Z0-6,0x5c584e);                              // arched drill-hall roof
+  B.wedge(MX,H+3.4,MZ,X1-X0+1,3.4,(Z1-Z0)*0.5,0x6a665c);
+  for(const[cx,cz]of[[X0+1.5,Z0+1.5],[X1-1.5,Z0+1.5],[X0+1.5,Z1-1.5],[X1-1.5,Z1-1.5]]){
+    B.cyl(cx,8,cz,2.3,2.5,16,9,ST,{solid:true});
+    B.box(cx,16.4,cz,5,0.5,5,0x8a8274);
+    crenel(cx,17,cz-2.3,4.6,true,ST,1.3);crenel(cx,17,cz+2.3,4.6,true,ST,1.3);
+    for(const a of[0.6,2.2,3.8,5.4])B.box(cx+Math.cos(a)*2.45,10,cz+Math.sin(a)*2.45,0.22,2.4,0.22,0x241f1a);}  // arrow slits
+  for(let px=90;px<=112;px+=4.4){B.box(px,6,Z0-0.1,1.4,7,0.2,0x241f1a);
+    B.box(px,6,Z0-0.12,1.1,6.6,0.24,0xffd9a0,{ch:'glowNight'});}            // tall drill-hall windows
+  crenel(MX,12.5,Z0+0.2,X1-X0-6,true,ST,1.8);
+}
+{ // Uris Hall: the Cor-Ten tower, famously sad
+  B.box(63,9,15,14,18,18,0x6e4a30,{solid:true});
+  for(let sy=2;sy<18;sy+=2.4)B.box(63,sy,5.9,12,0.9,0.16,0x54371f);         // weather streaks
+  for(let sy=3.4;sy<17;sy+=2.8)paneRow(63,sy,5.85,0,4,3.0,1.3,1.2);
+  B.box(63,18.2,15,14.4,0.4,18.4,0x54371f);
+}
+{ // Rockefeller Hall: Colonial Revival
+  const MX=93,MZ=-7,H=11;
+  B.box(MX,H/2,MZ,18,H,18,0x8a4636,{solid:true});
+  B.wedge(MX,H,MZ,19,4,15,0x4c453c);
+  B.box(MX,H+0.1,MZ,18.4,0.3,18.4,0xcfc4a8);
+  for(const fy of[2.6,6.2])paneRow(MX,fy,-16.1,0,5,3.2,1.4,2.2);
+  B.box(MX,1.8,-16.4,2.8,3.6,0.5,0xcfc4a8,{solid:true});
+}
+{ // A.D. White House: High Victorian Gothic mansion
+  const MX=57,MZ=-48,H=9,BR=0x4a3230,CR=0xd8cfc0;
+  B.box(MX,H/2,MZ,14,H,16,BR,{solid:true});
+  B.wedge(MX,H,MZ,15,5,12,0x3f3931);
+  B.box(52,7,-53,4,14,4,BR,{solid:true});B.cyl(52,15.2,-53,0.1,2.9,3,7,0x3f3931);  // small tower
+  for(const fy of[2.4,5.8]){paneRow(MX,fy,-40+0.12,0,3,3.6,1.3,2.2);
+    B.box(MX,fy+1.4,-39.95,11,0.3,0.14,CR);}
+  for(let vx=51;vx<=63;vx+=2.4)B.cyl(vx,1.5,-40.6,0.09,0.09,3,5,CR);        // veranda posts
+  B.box(MX,3.1,-40.6,13,0.3,1.6,CR);B.box(MX,0.12,-40.8,13,0.24,2,0x8d8a80,{solid:true});
+}
+{ // The Big Red Barn: the graduate and professional student center
+  const X0=68,X1=80,Z0=-56,Z1=-42,MX=74,MZ=-49,RED=0xa03424,WHT=0xe8e2d2;
+  wallD(MX,0,Z0+0.5,X1-X0,3.6,1,0,RED);
+  wallD(MX,0,Z1-0.5,X1-X0,3.6,1,0,RED);
+  wallD(X1-0.5,0,MZ,Z1-Z0,3.6,1,Math.PI/2,RED);
+  wallD(X0+0.5,0,MZ,Z1-Z0,3.6,1,Math.PI/2,RED,{off:0,w:2.4,h:2.8});         // west door to the patio
+  B.box(MX,0.14,MZ,X1-X0-1.4,0.28,Z1-Z0-1.4,0x6a4c2c,{solid:true});
+  B.wedge(MX,3.6,MZ,Z1-Z0+0.8,2.6,X1-X0+0.8,0x7c2418,{ry:Math.PI/2});       // gambrel, lower steep
+  B.wedge(MX,5.6,MZ,Z1-Z0+0.4,1.8,(X1-X0)*0.55,0x8a2c1c,{ry:Math.PI/2});    // gambrel, upper
+  B.box(MX,7.6,MZ,2.2,1.4,2.2,RED);B.wedge(MX,8.3,MZ,2.6,0.9,2.6,0x3f3931); // cupola
+  B.cyl(MX,9.5,MZ,0.02,0.08,0.7,4,0x2a2620);
+  for(const s of[-0.55,0.55])B.box(X0+0.06,1.5,MZ,0.14,2.6,0.16,WHT,{rz:s});     // X-brace door detail
+  B.box(X0+0.05,2.9,MZ,0.16,0.16,2.6,WHT);B.box(MX,3.4,MZ,X1-X0+0.3,0.3,Z1-Z0+0.3,WHT);
+  paneRow(MX,2.2,Z1+0.1,0,3,3.4,1.2,1.4);
+  // interior: bar, stools, chalkboard
+  B.box(77.6,0.9,MZ,1.4,1.3,8,0x53391f,{solid:true});
+  B.box(77.6,1.62,MZ,1.6,0.12,8.4,0xd8cfc0);
+  for(const sz of[-52,-50.4,-48.8,-47.2])B.cyl(76,0.65,sz,0.28,0.3,0.75,7,0x3c2c1e,{solid:true});
+  B.box(79.35,2.2,MZ,0.14,1.4,3.4,0x1c1f24);
+  B.box(79.3,2.2,MZ,0.1,1.1,3.0,0xd8cfa0,{ch:'glowAlways'});                // chalk menu
+  person(76,-50.4,'sit',Math.PI/2);person(76,-48.8,'sit',Math.PI/2);
+  // beer-garden patio with string lights (east of the A.D. White House garden wall)
+  B.box(66.2,0.05,-48,3.8,0.1,10,0x9b917d,{solid:true});                    // patio pad
+  for(const[tx,tz,tr]of[[65.6,-51.5,0.25],[66.3,-46.5,-0.2]]){
+    B.box(tx,0.68,tz,1.8,0.09,0.9,0x8a6b46,{ry:tr,solid:true});
+    for(const s of[-0.75,0.75])B.box(tx-Math.sin(tr)*s,0.42,tz+Math.cos(tr)*s,1.8,0.07,0.35,0x8a6b46,{ry:tr,solid:true});
+    for(const s of[-0.5,0.5])B.box(tx+Math.cos(tr)*s*1.2,0.34,tz-Math.sin(tr)*s*1.2,0.12,0.68,1.1,0x6a4c2c,{ry:tr});}
+  person(65.6,-50.5,'sit',0.25);person(65.7,-52.6,'sit',Math.PI+0.25);person(66.3,-45.6,'sit',-0.2);
+  for(const[px,pz]of[[64.6,-52.5],[64.6,-43.5],[67.6,-52.5],[67.6,-43.5]])
+    B.cyl(px,1.7,pz,0.05,0.07,3.4,5,0x3c2c1e,{solid:true});                 // string-light posts
+  for(const[ax,az,bx,bz]of[[64.6,-52.5,67.6,-52.5],[64.6,-43.5,67.6,-43.5],
+                            [64.6,-52.5,64.6,-43.5],[67.6,-52.5,67.6,-43.5],[64.6,-52.5,67.6,-43.5]]){
+    const n=7;
+    for(let k=1;k<n;k++){const t=k/n,sag=Math.sin(t*Math.PI)*0.5;
+      B.box(ax+(bx-ax)*t,3.32-sag,az+(bz-az)*t,0.15,0.15,0.15,0xffd27a,{ch:'glowAlways'});}}
+}
+{ // Bailey Hall: the concert dome
+  const MX=94,MZ=-32,H=10;
+  B.box(MX,H/2,MZ,20,H,20,0xcfc8b4,{solid:true});
+  B.sph(MX,H+0.5,MZ,13,0xb9b2a0,{sy:0.55});                                  // the dome
+  B.cyl(MX,H+0.4,MZ,7.4,7.4,2.2,14,0xc4bda8);
+  for(let k=0;k<6;k++)B.cyl(86.5,2.9,-38.5+k*2.6,0.42,0.5,5.8,8,0xdcd6c4,{solid:true});   // Ionic portico
+  B.box(86.2,6.2,-32,3.4,1.0,16,0xdcd6c4);B.wedge(86.2,6.7,-32,3.6,1.6,16.4,0xc4bda8,{ry:Math.PI/2});
+  B.box(85,0.25,-32,4.4,0.5,17,0x9b917d,{solid:true});B.box(83.6,0.08,-32,2.4,0.16,17,0x9b917d,{solid:true});
+}
+{ // Phase D paving
+  path([[81,-56],[81,118]],5,'#8a8274');                                     // East Avenue
+  path([[40,-26],[78,-26]],2.6);path([[81,-30],[66,-40],[66,-49],[69,-49]],2.4);
+  path([[64,25],[64,21],[81,18]],2.4);path([[66,47.5],[81,47.5]],2.4);
+  g2.fillStyle='#9b917d';
+  for(const[px,pz,r]of[[69,-49,2.4],[64,24.5,2.6],[86,-32,3]])
+    {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
+  groundTex.needsUpdate=true;
+}
+window.__routes.barn=[[30,-30],[46,-27],[60,-29],[66,-34],[66,-44],[66,-49],[69.8,-49],[74,-49]];
 window.__routes.cascadilla=[[22,150],[4,152],[-5,157],[-5,184],[-5,188],[-5,191],[-5,194],[-5,196.5],[8,198.5]];
 window.__routes.engQuad=[[-26,86],[-37,91],[-37,118],[-24,121],[10,121],[26,123],[26,143],[24,147]];
 window.__routes.duffield=[[24,147],[26,143],[32,140],[36.5,140],[40,140],[40,133],[38.5,130.5]];
@@ -1521,6 +1637,9 @@ moonSpr.scale.setScalar(52);scene.add(moonSpr);
 const glitter=new THREE.Mesh(new THREE.PlaneGeometry(220,26),
   new THREE.MeshBasicMaterial({color:0xffb46a,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
 glitter.rotation.x=-Math.PI/2;glitter.position.set(-320,-24.3,-15);scene.add(glitter);
+const avia=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),
+  new THREE.MeshBasicMaterial({color:0xff2222}));
+avia.position.set(65,26.9,50);scene.add(avia);                       // aviation beacon, Statler tower
 
 /* ============================== MATERIALS / FLUSH ============================== */
 const matMain=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.93,metalness:0.02,side:THREE.DoubleSide});
@@ -1553,6 +1672,8 @@ const PL=[
   plight(-60,6.8,95,0xffe0b8,22,20), plight(-50,6.8,95,0xffe0b8,22,20), // Gould pools
   plight(-23,4.2,110,0xffc98a,12,14),                               // Anabel chapel
   plight(40,5,132,0xffd9a0,30,22), plight(40,5,148,0xffd9a0,30,22), // Duffield atrium, open all night
+  plight(75,2.6,-49,0xffc98a,18,13,{fl:0.12}),                      // the Big Red Barn
+  plight(66.2,3.1,-48,0xffd27a,14,13,{fl:0.08}),                    // the beer-garden strings
   plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'}), plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'})];
 
 /* ============================== SHAFTS / BIRDS / LEAVES ============================== */
@@ -1610,6 +1731,9 @@ const AREAS=[
   {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
   {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
   {name:'Libe Slope',sub:'far above Cayuga’s waters',test:p=>p.x<-72},
+  {name:'The Big Red Barn',sub:'TGIF, grads only',test:p=>p.x>60&&p.x<81&&p.z>-57&&p.z<-41},
+  {name:'Uris Hall',sub:'they say the steel will finish weathering any year now',
+   test:p=>p.x>55&&p.x<71&&p.z>5&&p.z<25},
   {name:'Duffield Atrium',sub:'open all night',test:p=>p.x>33&&p.x<46&&p.z>123&&p.z<157},
   {name:'Gates Hall',sub:'computer and information science',test:p=>p.x>59&&p.x<83&&p.z>87&&p.z<119},
   {name:'The Gould Reading Room',sub:'Cornell Law Library',test:p=>p.x>-71&&p.x<-41&&p.z>89&&p.z<101},
@@ -1620,6 +1744,7 @@ const AREAS=[
   {name:'The Engineering Quad',sub:'the sundial is accurate to thirty seconds',
    test:p=>p.x>2&&p.x<62&&p.z>120&&p.z<174},
   {name:'Cascadilla Gorge',sub:'the way down to Collegetown',test:p=>p.z>184&&p.x>-32&&p.x<92},
+  {name:'East Avenue',sub:'the long way to everything',test:p=>p.x>76&&p.x<86&&p.z>-56&&p.z<118},
   {name:'The Arts Quad',sub:'Ezra and A.D. keep watch',test:p=>p.x>-68&&p.x<68&&p.z>-50&&p.z<50},
   {name:'Central Campus',sub:'Ithaca, New York',test:()=>true}];
 let curArea='',labelTimer=0,chimed=false;
@@ -1740,6 +1865,7 @@ function step(){
     l.m.position.set(l.x+Math.sin(T*1.7+l.ph*9)*0.9*t,l.y0*(1-t)+0.08,l.z+Math.cos(T*1.3+l.ph*7)*0.5*t);
     l.m.rotation.set(T*2.2+l.ph,T*1.6,T*2.8+l.ph*3);}
   glitter.material.opacity=gold*0.4*(1-ug);glitter.material.color.copy(asCol(PAL.sun));
+  avia.visible=(T%1.6)<0.8&&glowF>0.15;
   if(FXMODE==='none')renderer.render(scene,camera);else composer.render();
 }
 /* ============================== DEBUG / VERIFY API ============================== */
