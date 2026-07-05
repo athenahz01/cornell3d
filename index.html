@@ -1155,6 +1155,21 @@ function crenel(cx,cy,cz,len,alongX,color,pitch=1.6){        // battlement merlo
     B.box(cx+(alongX?l:0),cy,cz+(alongX?0:l),alongX?0.8:0.6,0.6,alongX?0.6:0.8,color);
 }
 function quoins(x,z,h,color){for(let y=0.7;y<h;y+=1.3)B.box(x,y,z,0.9,0.6,0.9,color);}
+function plinth(x0,z0,x1,z1,c=0x6b6353,door){    // dark foundation course, optional door gap
+  const h=0.75,strip=(cx,cz,w,d)=>B.box(cx,h/2,cz,w,h,d,c);
+  for(const side of['N','S','W','E']){
+    if(door&&door.side===side){const[a,b]=door.span;
+      if(side==='N'||side==='S'){const zz=side==='N'?z0-0.13:z1+0.13;
+        strip((x0+a)/2,zz,a-x0+0.25,0.26);strip((b+x1)/2,zz,x1-b+0.25,0.26);}
+      else{const xx=side==='W'?x0-0.13:x1+0.13;
+        strip(xx,(z0+a)/2,0.26,a-z0+0.25);strip(xx,(b+z1)/2,0.26,z1-b+0.25);}
+      continue;}
+    if(side==='N')strip((x0+x1)/2,z0-0.13,x1-x0+0.5,0.26);
+    if(side==='S')strip((x0+x1)/2,z1+0.13,x1-x0+0.5,0.26);
+    if(side==='W')strip(x0-0.13,(z0+z1)/2,0.26,z1-z0+0.5);
+    if(side==='E')strip(x1+0.13,(z0+z1)/2,0.26,z1-z0+0.5);
+  }
+}
 
 /* ============================== PHASE A: HO PLAZA + THE LAW QUAD ============================== */
 { // Ho Plaza furniture: benches and banners (paving is painted below)
@@ -1688,6 +1703,45 @@ function mansard(cx,cy,cz,w,d,color,trim){                 // Second Empire roof
     B.box(MX,fy,MZ-9.14,23,1.3,0.2,0xffe0b0,{ch:'glowNight'});}
   B.box(MX,H/2,MZ-9.3,0.5,H,0.5,0xa39c8a);
 }
+/* ============================== POLISH: PLINTHS, IVY, LIFE ============================== */
+{
+  plinth(-74,48,-48,72,0x5c5348,{side:'E',span:[58.6,61.4]});          // Willard Straight
+  plinth(-72,90,-40,100,0x6e665a,{side:'N',span:[-47.3,-44.7]});       // Myron north wing
+  plinth(-72,108,-46,118,0x6e665a);                                     // Myron south wing
+  plinth(-34,92,-12,116,0x6e665a,{side:'W',span:[110.8,113.2]});       // Anabel
+  plinth(-20,124,4,142,0x6e4634);                                       // Olin chem
+  plinth(54,26,74,44,0xb0aa98,{side:'N',span:[62.4,65.6]});            // Day
+  plinth(54,44,78,72,0xa8a290);                                         // Statler
+  plinth(84,28,118,64,0x77705f);                                        // Barton
+  plinth(84,-16,102,2,0x6e4634);                                        // Rockefeller
+  plinth(84,-42,104,-22,0xa8a290,{side:'W',span:[-38,-26]});           // Bailey
+  plinth(56,6,70,24,0x54371f);                                          // Uris Hall
+  plinth(34,106,56,126,0xa8a290);                                       // Phillips
+  for(const zb of[[-46,-30],[-24,-8],[-6,10]])                          // Old Stone Row
+    plinth(-74,zb[0],-60,zb[1],0x6e665a,{side:'E',span:[(zb[0]+zb[1])/2-1.4,(zb[0]+zb[1])/2+1.4]});
+  plinth(-28,-66,28,-52,0x77705f,{side:'S',span:[-1.6,1.6]});          // Sibley
+  plinth(-46,-64,-32,-50,0x5c2c22);                                     // Tjaden
+  plinth(30,-62,48,-46,0x5c2c22,{side:'S',span:[31.4,44.6]});          // Lincoln
+  plinth(50,-22,76,4,0xb0aa98,{side:'W',span:[-14,0]});                // Goldwin Smith
+  plinth(40,14,54,28,0x8a7452);plinth(-30,46,-2,64,0xa39c8a);          // Stimson, Olin Library
+  // ivy on the new gothic stone
+  const IVY2=[0x3a5c34,0x4a6b3a,0x5c7a3d];
+  const patch=(cx,cy,cz,w,h,ry)=>{for(let k=0;k<10;k++){
+    const lx=rnd(-w/2,w/2),ly=rnd(-h/2,h/2)*(1-Math.abs(lx)/w*0.7);
+    B.box(cx+lx*Math.cos(ry),cy+ly,cz-lx*Math.sin(ry),rnd(0.5,1.1),rnd(0.6,1.3),0.22,IVY2[k%3],{ry});}};
+  patch(-47.92,4,54,4,6,Math.PI/2);patch(-47.92,4.5,67,3,6,Math.PI/2);  // the Straight
+  patch(-60,4,89.94,5,6,0);patch(-46,4.5,117.9,4,5,0);                  // Myron
+  patch(-18,4,91.94,4,5,0);                                              // Anabel
+  patch(36,4,-45.94,4,6,0);                                              // Lincoln
+  patch(-59.94,4,-40,4,6,Math.PI/2);patch(-59.94,4.5,-14,3.4,5,Math.PI/2); // Stone Row
+  patch(95,5,27.92,5,7,0);patch(108,4,27.92,4,5,0);                      // Barton
+  patch(58,4,-21.94,4,6,0);                                              // Goldwin
+  // more life
+  person(18,133,'stand',0.7);person(18.8,133.6,'stand',-2.2);            // eng quad pair
+  person(31,157,'stand',2.9);person(-49,101.4,'sit',Math.PI);            // Upson corner, Purcell bench
+  person(-31,58,'stand',1.9);person(81,40,'stand',0.2);person(81.8,40.8,'stand',-2.6);  // plaza + East Ave
+  person(66,45.2,'stand',3.0);                                           // Statler door
+}
 window.__routes.barn=[[30,-30],[46,-27],[60,-29],[66,-34],[66,-44],[66,-49],[69.8,-49],[74,-49]];
 window.__routes.cascadilla=[[22,150],[4,152],[-5,157],[-5,184],[-5,188],[-5,191],[-5,194],[-5,196.5],[8,198.5]];
 window.__routes.engQuad=[[-26,86],[-37,91],[-37,118],[-24,121],[10,121],[26,123],[26,143],[24,147]];
@@ -1748,7 +1802,7 @@ const PL=[
   plight(36,8.0,55,0xffcf9a,8,18), plight(36,8.0,69,0xffcf9a,8,18), // sage: nave warmth
   plight(-61,3.2,50.6,0xff9a4a,26,18,{fl:0.28}),                    // the Straight: fireplace
   plight(-58,6.5,62,0xffd9a0,26,27),                                // Memorial Room wash
-  plight(-60,6.8,95,0xffe0b8,22,20), plight(-50,6.8,95,0xffe0b8,22,20), // Gould pools
+  plight(-60,6.8,95,0xffe0b8,27,22), plight(-50,6.8,95,0xffe0b8,27,22), // Gould pools
   plight(-23,4.2,110,0xffc98a,12,14),                               // Anabel chapel
   plight(40,5,132,0xffd9a0,30,22), plight(40,5,148,0xffd9a0,30,22), // Duffield atrium, open all night
   plight(75,2.6,-49,0xffc98a,18,13,{fl:0.12}),                      // the Big Red Barn
@@ -1785,7 +1839,8 @@ const BIRDS=[];
  g.computeVertexNormals();
  const bm=new THREE.MeshBasicMaterial({color:0x14161c,side:THREE.DoubleSide});
  const flocks=[{cx:-25,cz:-25,r:26,y:46,sp:0.09,n:5},{cx:38,cz:58,r:20,y:37,sp:-0.11,n:4},
-               {cx:-115,cz:15,r:32,y:26,sp:0.07,n:4}];
+               {cx:-115,cz:15,r:32,y:26,sp:0.07,n:4},
+               {cx:30,cz:140,r:24,y:40,sp:0.08,n:4},{cx:-50,cz:100,r:20,y:34,sp:-0.1,n:3}];
  for(const fl of flocks)for(let k=0;k<fl.n;k++){
    const m=new THREE.Mesh(g,bm);m.scale.setScalar(rnd(1.3,1.9));scene.add(m);
    BIRDS.push({m,fl,off:k*0.42+rnd(0.2),ro:rnd(-3,3),yo:rnd(-1.5,1.5)});}}
