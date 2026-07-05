@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>The Hill — an explorable Cornell</title>
+<title>The Hill, an explorable Cornell</title>
 <style>
   :root{ --red:#b31b1b; --gold:#e8b04b; --ink:#0c0e14; }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -48,7 +48,7 @@
   <div id="vignette"></div>
   <div id="areaLabel"><span id="areaMain"></span><span class="sub" id="areaSub"></span></div>
   <div id="clock"></div>
-  <div id="hint">W A S D — move &nbsp;·&nbsp; SHIFT — run &nbsp;·&nbsp; SPACE — jump</div>
+  <div id="hint">W A S D move &nbsp;Â·&nbsp; SHIFT run &nbsp;Â·&nbsp; SPACE jump</div>
   <div id="cross"></div>
 </div>
 <div id="fadein"></div>
@@ -67,8 +67,8 @@
       <div><b>CLICK</b> begin</div>
     </div>
     <div class="begin" id="beginText">Click to step onto the quad</div>
-    <div class="places">MCGRAW TOWER · THE GOULD READING ROOM · DUFFIELD ATRIUM<br>
-      SAGE CHAPEL · LIBE SLOPE · THE BIG RED BARN · HO PLAZA · and the tunnels below</div>
+    <div class="places">MCGRAW TOWER Â· THE GOULD READING ROOM Â· DUFFIELD ATRIUM<br>
+      SAGE CHAPEL Â· LIBE SLOPE Â· THE BIG RED BARN Â· HO PLAZA Â· and the tunnels below</div>
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -223,7 +223,7 @@ Builder.WEDGE=(()=>{ // base y in [0,0], apex y=1, ridge along x, depth z in [-.
 /* ============================== COLLISION / PHYSICS ============================== */
 const solids=[];                    // axis-aligned {x0,y0,z0,x1,y1,z1}
 function addSolid(x,y,z,w,h,d,ry=0){
-  const q=Math.round(ry/(Math.PI/2))&1; if(q){const t=w;w=d;d=t;}   // 90° rotations swap
+  const q=Math.round(ry/(Math.PI/2))&1; if(q){const t=w;w=d;d=t;}   // 90Â° rotations swap
   solids.push({x0:x-w/2,y0:y-h/2,z0:z-d/2,x1:x+w/2,y1:y+h/2,z1:z+d/2});
 }
 const P={pos:new THREE.Vector3(10,0.2,8),vel:new THREE.Vector3(),yaw:Math.PI/2+0.3,pitch:0,
@@ -492,7 +492,7 @@ function pedestal(x,z,ry){const y=terrainH(x,z);
   B.box(x,y+2.32,z,2.2,0.18,2.2,0x8d8a80,{ry});
   return y+2.41;}
 const BRONZE=0x5d5443,PATINA=0x66705c;
-{ // Ezra Cornell — standing, coat and cane, west side facing east
+{ // Ezra Cornell, standing, coat and cane, west side facing east
   const x=-20,z=-2,ry=Math.PI/2,top=pedestal(x,z,ry);
   B.box(x,top+0.55,z,0.44,1.1,0.5,BRONZE,{ry});                    // legs/coat skirt
   B.box(x,top+1.45,z,0.62,0.85,0.55,BRONZE,{ry});                  // torso/greatcoat
@@ -504,7 +504,7 @@ const BRONZE=0x5d5443,PATINA=0x66705c;
   B.box(x,top+2.34,z,0.42,0.1,0.42,BRONZE,{ry});                   // hat brim
   B.cyl(x,top+2.5,z,0.16,0.17,0.26,7,BRONZE);                      // hat
 }
-{ // Andrew Dickson White — seated in his chair, east side facing west
+{ // Andrew Dickson White, seated in his chair, east side facing west
   const x=20,z=-2,ry=-Math.PI/2,top=pedestal(x,z,ry);
   B.box(x+0.25,top+0.5,z,0.65,1.0,0.85,0x4e463a,{ry});             // chair
   B.box(x+0.52,top+1.25,z,0.14,1.5,0.85,0x4e463a,{ry});            // chair back
@@ -537,7 +537,7 @@ function bookRun(x0,x1,y,z){let x=x0+rnd(0,.1);
   while(x<x1-0.2){const w=rnd(0.3,0.9),h=rnd(0.26,0.4);
     B.box(x+w/2,y+h/2,z,w-0.06,h,0.26,BOOKCOLS[(Math.random()*BOOKCOLS.length)|0]);x+=w;}}
 
-/* ============================== URIS LIBRARY — A.D. WHITE READING ROOM ============================== */
+/* ============================== URIS LIBRARY, A.D. WHITE READING ROOM ============================== */
 {
   const X0=-77,X1=-35,Z0=18,Z1=42,MX=(X0+X1)/2,MZ=(Z0+Z1)/2,WH=13;
   const STONE=0xb0a183,TRIM=0xc6b89a,CREAM=0xd8b183,IRON=0xe7e1d3,OAK=0x6a4c2c,FLOOR=0.4;
@@ -771,13 +771,13 @@ function stained(x,y,z,w,h,ry,seed){
   for(const px of[-2.1,2.1])B.box(MX+px,1.7,Z0-0.9,0.7,3.4,1.0,TRIM,{solid:true});       // porch pillars
   B.box(MX,3.9,Z0-1.0,5.6,0.9,1.7,BRICK);                                                 // porch arch head
   B.box(MX,0.1,Z0-1.6,5,0.2,2.6,0x9b917d,{solid:true});
-  // stained glass — five bays per side, the great south window, west rose over entry
+  // stained glass, five bays per side, the great south window, west rose over entry
   let sd=3;
   for(let z=48.5;z<=76;z+=6.5){stained(X0+0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);
     stained(X1-0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);}
   stained(MX,8.35,Z1-0.5,4.6,4.6,0,97);                            // chancel rose, high above the apse
   stained(MX,6.8,Z0+0.5,4.6,4.2,0,131);                            // over entry
-  // interior — floor, pews, aisle, chancel
+  // interior: floor, pews, aisle, chancel
   B.box(MX,0.06,MZ,X1-X0-1.6,0.12,Z1-Z0-1.6,0x5c5148,{solid:true});
   B.box(MX,0.14,(Z0+MZ)/2+4,2.6,0.06,26,0x6e1f1c,{solid:true});    // crimson aisle
   for(let z=50;z<=71;z+=2.3)for(const sx of[-4.1,4.1]){
@@ -885,9 +885,9 @@ function stained(x,y,z,w,h,ry,seed){
       B.box(cx+Math.cos(a)*0.8,6.45,MZ+Math.sin(a)*0.8,0.09,0.22,0.09,0xffc36a,{ch:'glowAlways'});}}
 }
 /* ============================== THE STEAM TUNNELS ============================== */
-// Network: hut A (26,16) → stair down east → leg1 south (x≈34, z 17.2→28.8)
-// → leg2 west (z≈30, x 32.8→-2.8) → leg3 north (x≈-4, z 28.8→-58.8)
-// → boiler room off west side (z -26..-15) → stair up north → hut B (-4,-66)
+// Network: hut A (26,16) â†’ stair down east â†’ leg1 south (xâ‰ˆ34, z 17.2â†’28.8)
+// â†’ leg2 west (zâ‰ˆ30, x 32.8â†’-2.8) â†’ leg3 north (xâ‰ˆ-4, z 28.8â†’-58.8)
+// â†’ boiler room off west side (z -26..-15) â†’ stair up north â†’ hut B (-4,-66)
 const STEAMVENTS=[];
 {
   const FL=-6,HT=2.6,CON=0x5a5750,DK=0x47443e,WALLH=HT+1.6;
@@ -958,7 +958,7 @@ const STEAMVENTS=[];
   const gcv=document.createElement('canvas');gcv.width=256;gcv.height=128;
   {const x=gcv.getContext('2d');x.fillStyle='#55524b';x.fillRect(0,0,256,128);
    x.fillStyle='#7c1c1e';x.font='bold 44px Georgia';x.fillText('GO BIG RED',12,58);
-   x.fillStyle='#c9c4b8';x.font='bold 30px Georgia';x.fillText('1865 ➔',60,102);
+   x.fillStyle='#c9c4b8';x.font='bold 30px Georgia';x.fillText('1865 âž”',60,102);
    x.strokeStyle='#3a372f';for(let k=0;k<26;k++){x.beginPath();const sx=rnd(256);
      x.moveTo(sx,0);x.lineTo(sx+rnd(-8,8),rnd(30,128));x.stroke();}}
   const gtex=new THREE.CanvasTexture(gcv);gtex.colorSpace=THREE.SRGBColorSpace;
@@ -1022,7 +1022,7 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
   const s=new THREE.Sprite(m);s.scale.setScalar(0.01);scene.add(s);
   STEAM.push({s,vx,vy,vz,ph:rnd(1),spd:rnd(0.35,0.7),dx:rnd(-0.25,0.25),dz:rnd(-0.25,0.25)});}
 /* ============================== PASS 2: IVY, GRASS, CLOUDS, MOON, GLITTER ============================== */
-{ // ivy climbing the stone — Cornell without ivy isn't Cornell
+{ // ivy climbing the stone, Cornell without ivy isn't Cornell
   const IVY=[0x3a5c34,0x4a6b3a,0x5c7a3d,0x466333];
   function ivyPatch(cx,cy,cz,w,h,ry){
     const c=Math.cos(ry),s=Math.sin(ry),n=8+(Math.random()*8|0);
@@ -1056,7 +1056,7 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
     for(let k=0;k<7;k++){const a=k/7*Math.PI*2;
       B.box(cx+Math.cos(a)*0.88,7.68,30+Math.sin(a)*0.88,0.09,0.2,0.09,0xffc36a,{ch:'glowAlways'});}}
 }
-{ // PASS 3: facade articulation — the Uris east front stops being a barn
+{ // PASS 3: facade articulation, the Uris east front stops being a barn
   const TRIM=0x9c9483;
   for(const z of[20.5,25,35,39.5])B.box(-34.75,6.5,z,0.5,13,1.0,TRIM);        // pilasters
   B.box(-34.78,5.35,30,0.4,0.4,23.4,TRIM);                                     // string course
@@ -1118,7 +1118,7 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
       B.sph(bx+rnd(-2.6,2.6),by+5.8+dy2,bz+rnd(-2.6,2.6),rnd(4.2,5.8),
         C(k%3?bc:0xdca02c).multiplyScalar(0.7+0.3*(dy2/4.5)),{sy:0.8});}
   }
-{ // PASS 4: reading-room furnishings — crimson wing chairs, display cases, arched end window
+{ // PASS 4: reading-room furnishings, crimson wing chairs, display cases, arched end window
   const VELVET=0x7c2028,DK=0x3c2c1e;
   function wingChair(x,z,ry){
     B.box(x,0.75,z,0.62,0.16,0.6,VELVET,{ry});
@@ -1452,7 +1452,9 @@ function plinth(x0,z0,x1,z1,c=0x6b6353,door){    // dark foundation course, opti
   B.box(66,10.5,91.6,14,5,7,0xb9bec4,{solid:true});                  // the cantilever, hanging north
   B.box(66,7.8,91.6,13.4,0.4,6.4,0x878d94);
   B.box(66,10.5,88.2,13.6,4.6,0.3,0xa6abb2);
-  B.box(74,6.5,103,14,10,0.4,0xb9bec4,{ry:0.10});                    // angled facade plane, east
+  B.box(74.4,6.5,103,14,10,0.6,0xb9bec4,{ry:0.18});                  // angled facade planes, east
+  B.box(73.4,6.5,110,10,10,0.5,0xa6abb2,{ry:-0.12});
+  for(let sy=3;sy<12;sy+=2.2)B.box(82.4,sy,105,0.1,0.22,17,0x878d94);  // panel seams
   wallD(71,0,Z0+0.5,X1-X0,3.4,1,0,0x2c343c,{off:0,w:2.6,h:3.0});     // glass lobby, north face
   B.box(71,1.6,Z0+0.6,16,2.6,0.2,0xcfe6ee,{ch:'glowNight'});         // lobby glow
   B.box(71,0.1,MZ+1,X1-X0-2,0.2,20,0x8d939a,{solid:true});           // lobby floor
@@ -1545,6 +1547,10 @@ function plinth(x0,z0,x1,z1,c=0x6b6353,door){    // dark foundation course, opti
   for(let px=90;px<=112;px+=4.4){B.box(px,6,Z0-0.1,1.4,7,0.2,0x241f1a);
     B.box(px,6,Z0-0.12,1.1,6.6,0.24,0xffd9a0,{ch:'glowNight'});}            // tall drill-hall windows
   crenel(MX,12.5,Z0+0.2,X1-X0-6,true,ST,1.8);
+  for(let px=90;px<=112;px+=4.4)B.box(px,10.6,Z0-0.06,2.2,1.1,0.14,0xffd9a0,{ch:'glowNight'});  // clerestory band
+  for(let pz=34;pz<=58;pz+=4.8){B.box(X0-0.1,6,pz,0.2,7,1.4,0x241f1a);                          // west-face lancets
+    B.box(X0-0.12,6,pz,0.24,6.6,1.1,0xffd9a0,{ch:'glowNight'});
+    B.box(X0-0.1,10.6,pz,0.14,1.1,2.2,0xffd9a0,{ch:'glowNight'});}
 }
 { // Uris Hall: the Cor-Ten tower, famously sad
   B.box(63,9,15,14,18,18,0x6e4a30,{solid:true});
@@ -1741,6 +1747,11 @@ function mansard(cx,cy,cz,w,d,color,trim){                 // Second Empire roof
   person(31,157,'stand',2.9);person(-49,101.4,'sit',Math.PI);            // Upson corner, Purcell bench
   person(-31,58,'stand',1.9);person(81,40,'stand',0.2);person(81.8,40.8,'stand',-2.6);  // plaza + East Ave
   person(66,45.2,'stand',3.0);                                           // Statler door
+  person(-24,188.6,'stand',-1.4);                                        // leaning at the bridge parapet
+  person(30,120,'stand',1.5);person(6,120.6,'stand',-1.6);               // Campus Road walkers
+  path([[81,35],[74.5,35]],2);path([[81,58],[78.5,58]],2);path([[81,-7],[84,-7]],2);   // sidewalk spurs
+  path([[22,150],[4,152],[-5,157],[-5,185]],2.2,'#8f8672');              // the stair path, painted
+  groundTex.needsUpdate=true;
 }
 window.__routes.barn=[[30,-30],[46,-27],[60,-29],[66,-34],[66,-44],[66,-49],[69.8,-49],[74,-49]];
 window.__routes.cascadilla=[[22,150],[4,152],[-5,157],[-5,184],[-5,188],[-5,191],[-5,194],[-5,196.5],[8,198.5]];
@@ -1753,10 +1764,10 @@ window.__routes.gould=[[-26,86],[-38,87.5],[-46,88.4],[-46,91.8],[-50,92.6],[-58
 window.__routes.anabel=[[-26,86],[-37,91],[-37,109],[-35.5,112],[-31,112],[-24,112]];
 const tmpW=new THREE.Color(0xffffff);
 const CLOUDS=[];
-for(let k=0;k<9;k++){
+for(let k=0;k<13;k++){
   const m=new THREE.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false,fog:false});
   const s=new THREE.Sprite(m);
-  s.position.set(rnd(-380,280),rnd(140,220),rnd(-260,210));
+  s.position.set(rnd(-380,320),rnd(140,220),rnd(-260,260));
   s.scale.set(rnd(90,170),rnd(24,44),1);scene.add(s);
   CLOUDS.push({s,v:rnd(0.8,2.0)});
 }
@@ -1789,7 +1800,7 @@ const PL=[
   plight(36,4.5,62,0xffb46a,22,27,{fl:0.12}), plight(36,4,76.5,0xffc06a,16,16,{fl:0.16}), // chapel
   plight(20,2.2,-89.5,0xff8a3a,26,21,{fl:0.3}), plight(8,5.5,-84,0xffc98a,18,29),          // risley
   plight(-52,33.5,-6,0xffd9a0,12,18,{mode:'night'}),                                       // belfry
-  plight(34,-4.2,22,0xffc98a,10,14,{fl:0.5,drop:true}),                                    // tunnels…
+  plight(34,-4.2,22,0xffc98a,10,14,{fl:0.5,drop:true}),                                    // tunnelsâ€¦
   plight(10,-4.2,30,0xffc98a,10,14,{fl:0.5,drop:true}),
   plight(-4,-4.2,-20,0xff9a4a,14,16,{fl:0.4,drop:true}),
   plight(-4,-4.2,-46,0xffc98a,10,14,{fl:0.55,drop:true}),
@@ -1839,15 +1850,14 @@ const BIRDS=[];
  g.computeVertexNormals();
  const bm=new THREE.MeshBasicMaterial({color:0x14161c,side:THREE.DoubleSide});
  const flocks=[{cx:-25,cz:-25,r:26,y:46,sp:0.09,n:5},{cx:38,cz:58,r:20,y:37,sp:-0.11,n:4},
-               {cx:-115,cz:15,r:32,y:26,sp:0.07,n:4},
-               {cx:30,cz:140,r:24,y:40,sp:0.08,n:4},{cx:-50,cz:100,r:20,y:34,sp:-0.1,n:3}];
+               {cx:-115,cz:15,r:32,y:26,sp:0.07,n:4}];
  for(const fl of flocks)for(let k=0;k<fl.n;k++){
    const m=new THREE.Mesh(g,bm);m.scale.setScalar(rnd(1.3,1.9));scene.add(m);
    BIRDS.push({m,fl,off:k*0.42+rnd(0.2),ro:rnd(-3,3),yo:rnd(-1.5,1.5)});}}
 const FLEAVES=[];
 {const cols=[0xc0511f,0xd07a22,0xdca02c,0xa8391a];
- const spots=TREES.filter(([x,z])=>Math.abs(x)<62&&Math.abs(z)<46);
- for(let k=0;k<26&&spots.length;k++){
+ const spots=TREES.filter(([x,z])=>x>-70&&x<90&&z>-60&&z<180);
+ for(let k=0;k<34&&spots.length;k++){
    const[tx,tz]=spots[(Math.random()*spots.length)|0];
    const m=new THREE.Mesh(new THREE.PlaneGeometry(0.22,0.16),
      new THREE.MeshBasicMaterial({color:cols[k%4],side:THREE.DoubleSide}));
@@ -1858,13 +1868,13 @@ const FLEAVES=[];
 const AREAS=[
   {name:'The Steam Tunnels',sub:'somewhere beneath the quad',
    test:p=>p.y<-2.5&&p.x>-16&&p.x<37&&p.z>-70&&p.z<33},
-  {name:'McGraw Tower',sub:()=>P.pos.y>28?'the chimes — you climbed all 161':'161 steps to the top',
+  {name:'McGraw Tower',sub:()=>P.pos.y>28?'the chimes, you climbed all 161':'161 steps to the top',
    test:p=>p.x>-58&&p.x<-46&&p.z>-12&&p.z<0},
   {name:'A.D. White Reading Room',sub:'Uris Library',test:p=>p.x>-78&&p.x<-34&&p.z>17&&p.z<43},
   {name:'Sage Chapel',sub:'est. 1875',test:p=>p.x>27&&p.x<45&&p.z>43&&p.z<81},
   {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
   {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
-  {name:'Libe Slope',sub:'far above Cayuga’s waters',test:p=>p.x<-72},
+  {name:'Libe Slope',sub:'far above Cayugaâ€™s waters',test:p=>p.x<-72},
   {name:'The Big Red Barn',sub:'TGIF, grads only',test:p=>p.x>60&&p.x<81&&p.z>-57&&p.z<-41},
   {name:'Uris Hall',sub:'they say the steel will finish weathering any year now',
    test:p=>p.x>55&&p.x<71&&p.z>5&&p.z<25},
@@ -1894,7 +1904,7 @@ function updateArea(){
     elSub.textContent=AREAS[1].sub();elLabel.style.opacity=1;
     clearTimeout(labelTimer);labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);playChimes();}
 }
-/* ============================== AUDIO — the chimes ============================== */
+/* ============================== AUDIO, the chimes ============================== */
 let AC=null;function initAudio(){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
 function bellNote(f,t0,dur=2.4,vol=0.1){if(!AC)return;
   for(const[m,v]of[[1,1],[2.76,0.4],[5.4,0.13]]){
@@ -1978,7 +1988,7 @@ function step(){
   const hours=(dayT*24+7)%24;
   for(const h of clockHands){h.hr.rotation.z=-(hours%12)/12*Math.PI*2;h.mn.rotation.z=-(hours%1)*Math.PI*2;}
   for(const b of bellGroup.children)if(b.userData.ph!==undefined)b.rotation.x=Math.sin(T*1.05+b.userData.ph)*0.1;
-  elClock.textContent=String(Math.floor(hours)).padStart(2,'0')+':'+String(Math.floor(hours%1*60)).padStart(2,'0')+(glowF>0.5?' ☾':' ☀');
+  elClock.textContent=String(Math.floor(hours)).padStart(2,'0')+':'+String(Math.floor(hours%1*60)).padStart(2,'0')+(glowF>0.5?' â˜¾':' â˜€');
   updateArea();
   // clouds, moon, lake glitter
   for(const c of CLOUDS){c.s.position.x+=c.v*dt;if(c.s.position.x>280)c.s.position.x=-380;
