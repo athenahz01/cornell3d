@@ -465,7 +465,8 @@ const LAMPS=[];
   [-82,6],[-104,20],[-126,26],[-148,16],[-168,2],[-96,-14],[64,-44],[64,44],[-66,-44],
   [-36.8,50],[-29.6,50],[-34.4,62],[-27.2,62],[-32,74],[-24.8,74],[-29.8,86],[-22.6,86],  // Ho Plaza pairs
   [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76],                        // Campus Road + the law court
-  [28.5,127],[12,145],[30,152],[24,166],[48,143],[62,118.5]];                               // Engineering Quad
+  [28.5,127],[12,145],[30,152],[24,166],[48,143],[62,118.5],                                // Engineering Quad
+  [-26.6,187],[-21.4,211]];                                                                 // Cascadilla bridge
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
@@ -1455,6 +1456,45 @@ function quoins(x,z,h,color){for(let y=0.7;y<h;y+=1.3)B.box(x,y,z,0.9,0.6,0.9,co
     {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
   groundTex.needsUpdate=true;
 }
+/* ============================== PHASE C: CASCADILLA GORGE ============================== */
+{
+  g2.fillStyle='#4a463e';g2.fillRect(gx(-32),gz(187),gx(92)-gx(-32),gz(211)-gz(187));   // rock band
+  g2.fillStyle='#5a5448';g2.fillRect(gx(-32),gz(188),gx(92)-gx(-32),gs(2.4));
+  groundTex.needsUpdate=true;
+  const cw=new THREE.Mesh(new THREE.PlaneGeometry(112,5),
+    new THREE.MeshStandardMaterial({color:0x2a3b46,roughness:0.15,metalness:0.5}));
+  cw.rotation.x=-Math.PI/2;cw.position.set(28,-8.55,198);scene.add(cw);                 // Cascadilla Creek
+  {const g=new THREE.BufferGeometry();                                                   // falls, east end
+   g.setAttribute('position',new THREE.Float32BufferAttribute(
+     [82,0.2,193.2, 86,0.2,193.2, 86,-8.4,197.6, 82,-8.4,197.6],3));
+   g.setIndex([0,1,2,0,2,3]);g.computeVertexNormals();
+   scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({color:0xdfe8ea,transparent:true,opacity:0.85})));}
+  for(let k=0;k<14;k++){const bx=rnd(-24,84),bz=rnd(194,204);                            // boulders
+    B.sph(bx,terrainH(bx,bz)+0.3,bz,rnd(0.7,1.8),[0x5a5448,0x4c4840][k%2],{sy:0.6});}
+  // north rim fence with a gap at the stair, plus the south rim
+  for(let x=-30;x<=88;x+=4)if(x<-8||x>-2)B.cyl(x,terrainH(x,186.2)+0.55,186.2,0.05,0.05,1.1,4,0x2a2620);
+  B.box(-19,0.95,186.2,22,0.08,0.08,0x2a2620);B.box(43,0.95,186.2,90,0.08,0.08,0x2a2620);
+  addSolid(-19,0,186.2,22,4,0.5);addSolid(43,0,186.2,90,4,0.5);
+  addSolid(28,0,211.2,124,4,0.5);
+  // stone stair trail down at x -5, west of Hollister
+  for(let s=0;s<26;s++){const sz=186.5+s*0.28,st=terrainH(-5,sz);
+    const top=Math.max(st+0.08,-0.05-0.35*s);
+    B.box(-5,top-0.12,sz,2.2,0.24,0.56,0x77746a,{solid:true});}
+  // College Avenue bridge at x -24
+  B.box(-24,0.1,199,4.6,0.5,27,0x8d8a80,{solid:true});                                   // deck
+  B.cyl(-24,-4.2,199,4.4,4.4,4.8,12,0x77746a,{rz:Math.PI/2});                            // arch barrel
+  for(const s of[-1,1]){B.box(-24+s*2.1,0.85,199,0.4,1.0,27,0x77746a,{solid:true});
+    B.box(-24+s*2.1,1.4,199,0.5,0.14,27.4,0x8d8a80);}
+  for(const bz of[188,210]){B.box(-24,0.75,bz,4.9,1.5,1.2,0x6e6a60,{solid:true});}       // abutments
+  person(-24,193,'stand',1.5);
+  for(let k=0;k<5;k++){                                                                  // gorge mist
+    const m=new THREE.SpriteMaterial({map:puffTex,transparent:true,opacity:0,
+      color:0xd8dde2,depthWrite:false,fog:false});
+    const s=new THREE.Sprite(m);s.position.set(rnd(-20,84),-5+rnd(0,4),rnd(192,205));
+    s.scale.setScalar(rnd(7,13));scene.add(s);
+    FOGS.push({s,x0:-20,x1:84,z0:192,z1:205,fy:-6,vx:rnd(0.5,1.2),vz:rnd(0.2,0.6),o:rnd(0.12,0.28),ph:rnd(9)});}
+}
+window.__routes.cascadilla=[[22,150],[4,152],[-5,157],[-5,184],[-5,188],[-5,191],[-5,194],[-5,196.5],[8,198.5]];
 window.__routes.engQuad=[[-26,86],[-37,91],[-37,118],[-24,121],[10,121],[26,123],[26,143],[24,147]];
 window.__routes.duffield=[[24,147],[26,143],[32,140],[36.5,140],[40,140],[40,133],[38.5,130.5]];
 window.__routes.gates=[[26,123],[30,121],[30,103],[57,103],[57,95],[58.5,91.5],[66,91],[71,92.2],[71,97],[70,103]];
@@ -1579,6 +1619,7 @@ const AREAS=[
   {name:'Ho Plaza',sub:'crossroads of the Hill',test:p=>p.x>-42&&p.x<-20&&p.z>44&&p.z<90},
   {name:'The Engineering Quad',sub:'the sundial is accurate to thirty seconds',
    test:p=>p.x>2&&p.x<62&&p.z>120&&p.z<174},
+  {name:'Cascadilla Gorge',sub:'the way down to Collegetown',test:p=>p.z>184&&p.x>-32&&p.x<92},
   {name:'The Arts Quad',sub:'Ezra and A.D. keep watch',test:p=>p.x>-68&&p.x<68&&p.z>-50&&p.z<50},
   {name:'Central Campus',sub:'Ithaca, New York',test:()=>true}];
 let curArea='',labelTimer=0,chimed=false;
