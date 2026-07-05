@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Hill — an explorable Cornell</title>
+<style>
+  :root{ --red:#b31b1b; --gold:#e8b04b; --ink:#0c0e14; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:100%;height:100%;overflow:hidden;background:#000;font-family:Georgia,'Times New Roman',serif}
+  canvas{display:block}
+  /* ---------- HUD ---------- */
+  #hud{position:fixed;inset:0;pointer-events:none;z-index:5}
+  #vignette{position:absolute;inset:0;background:radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.42) 100%)}
+  #areaLabel{position:absolute;top:34px;left:50%;transform:translateX(-50%);text-align:center;color:#f3ead6;
+    font-size:26px;letter-spacing:.35em;text-transform:uppercase;text-shadow:0 2px 14px rgba(0,0,0,.9);
+    opacity:0;transition:opacity 1.2s ease}
+  #areaLabel .sub{display:block;font-size:12px;letter-spacing:.5em;color:var(--gold);margin-top:6px}
+  #clock{position:absolute;top:26px;right:30px;color:#e8dfc8;font-size:15px;letter-spacing:.2em;text-shadow:0 1px 8px #000;opacity:.85}
+  #hint{position:absolute;bottom:34px;left:50%;transform:translateX(-50%);color:#cfc6ae;font-size:13px;
+    letter-spacing:.18em;text-shadow:0 1px 8px #000;opacity:.9;transition:opacity 2s}
+  #cross{position:absolute;top:50%;left:50%;width:4px;height:4px;margin:-2px;border-radius:50%;
+    background:rgba(255,255,255,.75);box-shadow:0 0 4px rgba(0,0,0,.8)}
+  /* ---------- Start / pause overlay ---------- */
+  #overlay{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:radial-gradient(120% 90% at 50% 15%, #1d2740 0%, #0c0e14 55%, #05060a 100%);
+    transition:opacity .8s ease}
+  #overlay.hidden{opacity:0;pointer-events:none}
+  .panel{text-align:center;color:#e9e0ca;max-width:640px;padding:40px}
+  .panel .eyebrow{font-size:12px;letter-spacing:.6em;color:var(--gold);text-transform:uppercase}
+  .panel h1{font-size:72px;letter-spacing:.12em;margin:14px 0 4px;color:#f5eeda;font-weight:normal}
+  .panel h1 b{color:var(--red);font-weight:normal}
+  .panel .tag{font-style:italic;color:#b8ad92;font-size:17px;margin-bottom:28px}
+  .rule{width:220px;height:2px;margin:0 auto 28px;background:linear-gradient(90deg,transparent,var(--red),transparent)}
+  .controls{display:grid;grid-template-columns:repeat(2,minmax(180px,1fr));gap:10px 34px;justify-content:center;
+    font-size:14px;color:#cfc6ae;text-align:left;margin:0 auto 30px;width:max-content}
+  .controls b{display:inline-block;min-width:74px;color:#f0e7d0;font-family:ui-monospace,Consolas,monospace;
+    font-size:12px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:5px;
+    padding:3px 8px;margin-right:10px;text-align:center;letter-spacing:.05em}
+  .begin{font-size:15px;letter-spacing:.4em;text-transform:uppercase;color:#fff;animation:pulse 2.4s infinite}
+  .places{margin-top:26px;font-size:12px;letter-spacing:.14em;color:#8e8570;line-height:1.9}
+  @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
+  #fadein{position:fixed;inset:0;background:#000;z-index:8;pointer-events:none;transition:opacity 3s ease;opacity:1}
+</style>
+</head>
+<body>
+<div id="hud">
+  <div id="vignette"></div>
+  <div id="areaLabel"><span id="areaMain"></span><span class="sub" id="areaSub"></span></div>
+  <div id="clock"></div>
+  <div id="hint">W A S D — move &nbsp;·&nbsp; SHIFT — run &nbsp;·&nbsp; SPACE — jump</div>
+  <div id="cross"></div>
+</div>
+<div id="fadein"></div>
+<div id="overlay">
+  <div class="panel">
+    <div class="eyebrow">Far above Cayuga's waters</div>
+    <h1>THE <b>HILL</b></h1>
+    <div class="tag">an explorable miniature of Cornell University</div>
+    <div class="rule"></div>
+    <div class="controls">
+      <div><b>W A S D</b> walk</div>
+      <div><b>MOUSE</b> look</div>
+      <div><b>SHIFT</b> run</div>
+      <div><b>SPACE</b> jump</div>
+      <div><b>ESC</b> pause</div>
+      <div><b>CLICK</b> begin</div>
+    </div>
+    <div class="begin" id="beginText">Click to step onto the quad</div>
+    <div class="places">MCGRAW TOWER · URIS LIBRARY · THE ARTS QUAD<br>
+      RISLEY HALL · SAGE CHAPEL · LIBE SLOPE · …and the tunnels below</div>
+  </div>
+</div>
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+"three/addons/":"https://unpkg.com/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {EffectComposer} from 'three/addons/postprocessing/EffectComposer.js';
+import {RenderPass} from 'three/addons/postprocessing/RenderPass.js';
+import {UnrealBloomPass} from 'three/addons/postprocessing/UnrealBloomPass.js';
+import {OutputPass} from 'three/addons/postprocessing/OutputPass.js';
+
+/* ============================== CORE SETUP ============================== */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.75));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.05;
+document.body.appendChild(renderer.domElement);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(72,innerWidth/innerHeight,0.08,900);
+scene.fog=new THREE.FogExp2(0xc7b39a,0.004);
+const composer=new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene,camera));
+const bloomPass=new UnrealBloomPass(new THREE.Vector2(innerWidth,innerHeight),0.55,0.5,0.82);
+composer.addPass(bloomPass);
+composer.addPass(new OutputPass());
+const FXMODE=new URLSearchParams(location.search).get('fx')||'all';
+if(FXMODE==='nobloom')bloomPass.enabled=false;
+window.__fx={composer,bloomPass,FXMODE};
+window.__shot=async name=>{window.__step&&window.__step();
+  const d=document.querySelector('canvas').toDataURL('image/jpeg',0.85);
+  await fetch('/shot?name='+name,{method:'POST',body:d});return 'saved '+name;};
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
+
+const rnd=(a=1,b)=>b===undefined?Math.random()*a:a+Math.random()*(b-a);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a),0,1);return t*t*(3-2*t);}
+const C=h=>new THREE.Color(h);
+
+/* ============================== TERRAIN HEIGHT ============================== */
+// +x = east, +z = south. Quad at origin. Slope falls west of x=-72, gorge north of z=-108.
+function terrainH(x,z){
+  let h=0;
+  if(x<-74) h-=26*smooth(-74,-165,x);
+  if(z<-104) h-=24*smooth(-104,-126,z);
+  if(x>90) h-=6*smooth(90,140,x);            // dips east
+  h+=Math.sin(x*0.11)*Math.cos(z*0.13)*0.22; // gentle undulation
+  if(x>-70&&x<70&&z>-100&&z<95) h=Math.sin(x*0.11)*Math.cos(z*0.13)*0.1; // keep campus flat-ish
+  if(x>24.4&&x<33.5&&z>14.6&&z<17.4) h=-7.5;      // tunnel stairwell pits
+  if(x>-6&&x<-2&&z>-64.2&&z<-56.6) h=-7.5;
+  return h;
+}
+
+/* ============================== GEOMETRY BUILDER ============================== */
+// Merges boxes/cylinders/spheres/wedges into few vertex-colored meshes. Channels->materials.
+class Builder{
+  constructor(){this.ch={};}
+  _c(n){return this.ch[n]??(this.ch[n]={p:[],n:[],c:[],i:[],v:0});}
+  _push(ch,g,color,m4){
+    const A=this._c(ch),nm=new THREE.Matrix3().getNormalMatrix(m4);
+    const v=new THREE.Vector3(),col=C(color);
+    for(let k=0;k<g.p.length;k+=3){
+      v.set(g.p[k],g.p[k+1],g.p[k+2]).applyMatrix4(m4);A.p.push(v.x,v.y,v.z);
+      v.set(g.n[k],g.n[k+1],g.n[k+2]).applyMatrix3(nm).normalize();A.n.push(v.x,v.y,v.z);
+      A.c.push(col.r,col.g,col.b);
+    }
+    for(const ix of g.i)A.i.push(ix+A.v);
+    A.v+=g.p.length/3;
+  }
+  _m4(x,y,z,rx=0,ry=0,rz=0,sx=1,sy=1,sz=1){
+    return new THREE.Matrix4().compose(new THREE.Vector3(x,y,z),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(rx,ry,rz,'YXZ')),
+      new THREE.Vector3(sx,sy,sz));
+  }
+  box(x,y,z,w,h,d,color,o={}){ // y = center
+    this._push(o.ch||'main',Builder.BOX,color,this._m4(x,y,z,o.rx||0,o.ry||0,o.rz||0,w,h,d));
+    if(o.solid)addSolid(x,y,z,w,h,d,o.ry||0);
+  }
+  cyl(x,y,z,rt,rb,h,seg,color,o={}){
+    this._push(o.ch||'main',Builder.cylGeo(rt,rb,seg,o.open),color,this._m4(x,y,z,o.rx||0,o.ry||0,o.rz||0,1,h,1));
+    if(o.solid)addSolid(x,y,z,Math.max(rt,rb)*2,h,Math.max(rt,rb)*2,0);
+  }
+  sph(x,y,z,r,color,o={}){
+    this._push(o.ch||'main',Builder.SPH,color,this._m4(x,y,z,o.rx||0,o.ry||0,o.rz||0,r*(o.sx||1),r*(o.sy||1),r*(o.sz||1)));
+  }
+  wedge(x,y,z,w,h,d,color,o={}){ // ridge along x, y = base
+    this._push(o.ch||'main',Builder.WEDGE,color,this._m4(x,y,z,0,o.ry||0,0,w,h,d));
+  }
+  flush(mats){
+    const meshes={};
+    for(const n in this.ch){const A=this.ch[n],g=new THREE.BufferGeometry();
+      g.setAttribute('position',new THREE.Float32BufferAttribute(A.p,3));
+      g.setAttribute('normal',new THREE.Float32BufferAttribute(A.n,3));
+      g.setAttribute('color',new THREE.Float32BufferAttribute(A.c,3));
+      g.setIndex(A.i);
+      const m=new THREE.Mesh(g,mats[n]||mats.main);
+      m.castShadow=m.receiveShadow=(n==='main');
+      scene.add(m);meshes[n]=m;}
+    return meshes;
+  }
+}
+// unit box (24 verts)
+Builder.BOX=(()=>{const p=[],n=[],i=[];const F=[[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
+  for(const f of F){const[ax,ay,az]=f;const u=ax?[0,1,0]:[1,0,0];const w=[ay*az?0:az||0,0,0];
+    const U=ax?[0,0,1]:(ay?[1,0,0]:[1,0,0]);const V2=ax?[0,1,0]:(ay?[0,0,1]:[0,1,0]);
+    const b=p.length/3;
+    for(const[su,sv]of[[-1,-1],[1,-1],[1,1],[-1,1]]){
+      p.push((ax+su*U[0]+sv*V2[0])/2,(ay+su*U[1]+sv*V2[1])/2,(az+su*U[2]+sv*V2[2])/2);
+      n.push(ax,ay,az);}
+    // winding
+    if(ax>0||ay>0||az>0)i.push(b,b+1,b+2,b,b+2,b+3);else i.push(b,b+2,b+1,b,b+3,b+2);
+  }return{p,n,i};})();
+Builder.cylGeo=(rt,rb,seg,open)=>{const p=[],n=[],i=[];
+  for(let s=0;s<=seg;s++){const a=s/seg*Math.PI*2,ca=Math.cos(a),sa=Math.sin(a);
+    p.push(ca*rt,0.5,sa*rt, ca*rb,-0.5,sa*rb);
+    const sl=(rb-rt);const ny=sl/Math.hypot(1,sl)||0;
+    n.push(ca,ny,sa, ca,ny,sa);}
+  for(let s=0;s<seg;s++){const a=s*2;i.push(a,a+2,a+1,a+1,a+2,a+3);}
+  if(!open){const bt=p.length/3;p.push(0,0.5,0);n.push(0,1,0);
+    for(let s=0;s<=seg;s++){const a=s/seg*Math.PI*2;p.push(Math.cos(a)*rt,0.5,Math.sin(a)*rt);n.push(0,1,0);}
+    for(let s=0;s<seg;s++)i.push(bt,bt+2+s,bt+1+s);
+    const bb=p.length/3;p.push(0,-0.5,0);n.push(0,-1,0);
+    for(let s=0;s<=seg;s++){const a=s/seg*Math.PI*2;p.push(Math.cos(a)*rb,-0.5,Math.sin(a)*rb);n.push(0,-1,0);}
+    for(let s=0;s<seg;s++)i.push(bb,bb+1+s,bb+2+s);}
+  return{p,n,i};};
+Builder.SPH=(()=>{const p=[],n=[],i=[],W=10,H=7;
+  for(let y=0;y<=H;y++){const th=y/H*Math.PI;
+    for(let x=0;x<=W;x++){const ph=x/W*Math.PI*2;
+      const nx=Math.sin(th)*Math.cos(ph),ny=Math.cos(th),nz=Math.sin(th)*Math.sin(ph);
+      p.push(nx*.5,ny*.5,nz*.5);n.push(nx,ny,nz);}}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){const a=y*(W+1)+x;
+    i.push(a,a+1,a+W+1, a+1,a+W+2,a+W+1);}
+  return{p,n,i};})();
+Builder.WEDGE=(()=>{ // base y in [0,0], apex y=1, ridge along x, depth z in [-.5,.5], width x in [-.5,.5]
+  const p=[],n=[],i=[];const s=Math.SQRT1_2;
+  const quad=(a,b,c,d,nx,ny,nz)=>{const k=p.length/3;p.push(...a,...b,...c,...d);
+    for(let q=0;q<4;q++)n.push(nx,ny,nz);i.push(k,k+1,k+2,k,k+2,k+3);};
+  const tri=(a,b,c,nx,ny,nz)=>{const k=p.length/3;p.push(...a,...b,...c);
+    for(let q=0;q<3;q++)n.push(nx,ny,nz);i.push(k,k+1,k+2);};
+  quad([-.5,0,-.5],[.5,0,-.5],[.5,1,0],[-.5,1,0],0,s,-s);      // north slope
+  quad([.5,0,.5],[-.5,0,.5],[-.5,1,0],[.5,1,0],0,s,s);          // south slope
+  tri([-.5,0,.5],[-.5,0,-.5],[-.5,1,0],-1,0,0);                 // west gable
+  tri([.5,0,-.5],[.5,0,.5],[.5,1,0],1,0,0);                     // east gable
+  quad([-.5,0,-.5],[-.5,0,.5],[.5,0,.5],[.5,0,-.5],0,-1,0);     // bottom
+  return{p,n,i};})();
+
+/* ============================== COLLISION / PHYSICS ============================== */
+const solids=[];                    // axis-aligned {x0,y0,z0,x1,y1,z1}
+function addSolid(x,y,z,w,h,d,ry=0){
+  const q=Math.round(ry/(Math.PI/2))&1; if(q){const t=w;w=d;d=t;}   // 90° rotations swap
+  solids.push({x0:x-w/2,y0:y-h/2,z0:z-d/2,x1:x+w/2,y1:y+h/2,z1:z+d/2});
+}
+const P={pos:new THREE.Vector3(10,0.2,8),vel:new THREE.Vector3(),yaw:Math.PI/2+0.3,pitch:0,
+  grounded:true,R:0.34,H:1.78,EYE:1.66,STEP:0.55};
+function groundAt(x,z,feet){
+  let g=terrainH(x,z);
+  if(feet<g-0.4)g=-999;               // below grade (tunnels): terrain no longer the floor
+  for(const s of solids){
+    if(x>s.x0-P.R&&x<s.x1+P.R&&z>s.z0-P.R&&z<s.z1+P.R&&s.y1<=feet+P.STEP&&s.y1>g)g=s.y1;
+  }
+  return g;
+}
+function blocks(s,feet){return s.y1>feet+P.STEP&&s.y0<feet+P.H;}
+function moveAxis(axis,d){
+  if(!d)return;
+  P.pos[axis]+=d;
+  for(const s of solids){
+    if(!blocks(s,P.pos.y))continue;
+    if(P.pos.x>s.x0-P.R&&P.pos.x<s.x1+P.R&&P.pos.z>s.z0-P.R&&P.pos.z<s.z1+P.R){
+      if(axis==='x')P.pos.x=d>0?s.x0-P.R:s.x1+P.R;else P.pos.z=d>0?s.z0-P.R:s.z1+P.R;
+    }
+  }
+}
+const keys={};let started=false,locked=false;
+addEventListener('keydown',e=>{keys[e.code]=true;if(e.code==='Space')e.preventDefault();});
+addEventListener('keyup',e=>keys[e.code]=false);
+document.addEventListener('mousemove',e=>{
+  if(!locked)return;
+  P.yaw-=e.movementX*0.0021;P.pitch-=e.movementY*0.0021;
+  P.pitch=clamp(P.pitch,-1.52,1.52);
+});
+const overlay=document.getElementById('overlay');
+overlay.addEventListener('click',()=>{
+  if(!started){started=true;initAudio();document.getElementById('fadein').style.opacity=0;
+    setTimeout(()=>document.getElementById('hint').style.opacity=0,9000);}
+  overlay.classList.add('hidden');
+  renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock();
+});
+document.addEventListener('pointerlockchange',()=>{
+  locked=document.pointerLockElement===renderer.domElement;
+  if(!locked&&started){overlay.classList.remove('hidden');
+    document.getElementById('beginText').textContent='Click to resume';}
+});
+let autopilot=null;   // {wps:[[x,z],...], i, done, t}
+function stepPlayer(dt){
+  const run=keys.ShiftLeft||keys.ShiftRight,speed=run?8.2:4.4;
+  let fx=0,fz=0;
+  if(keys.KeyW)fz+=1;if(keys.KeyS)fz-=1;if(keys.KeyA)fx-=1;if(keys.KeyD)fx+=1;
+  let mx=0,mz=0;
+  if(fx||fz){const l=Math.hypot(fx,fz);fx/=l;fz/=l;
+    const s=Math.sin(P.yaw),c=Math.cos(P.yaw);
+    mx=(-s*fz - c*fx)*speed; mz=(-c*fz + s*fx)*speed;
+  }
+  if(autopilot&&!autopilot.done){
+    const wp=autopilot.wps[autopilot.i];
+    const dx=wp[0]-P.pos.x,dz=wp[1]-P.pos.z,dist=Math.hypot(dx,dz);
+    if(dist<0.6){autopilot.i++;if(autopilot.i>=autopilot.wps.length)autopilot.done=true;}
+    else{mx=dx/dist*7.5;mz=dz/dist*7.5;}
+    autopilot.t+=dt;if(autopilot.t>autopilot.timeout)autopilot.done=true;
+  }
+  moveAxis('x',mx*dt);moveAxis('z',mz*dt);
+  // vertical
+  const g=groundAt(P.pos.x,P.pos.z,P.pos.y+0.01);
+  P.vel.y-=15*dt;
+  if(P.grounded&&(keys.Space||(autopilot&&!autopilot.done&&false))){P.vel.y=5.6;P.grounded=false;}
+  P.pos.y+=P.vel.y*dt;
+  if(P.pos.y<=g){P.pos.y=g;P.vel.y=0;P.grounded=true;}
+  else if(P.grounded&&P.pos.y-g<0.75&&P.vel.y<=0){P.pos.y=g;P.vel.y=0;}
+  else if(P.pos.y-g>0.05)P.grounded=false;
+  // ceilings
+  if(P.vel.y>0)for(const s of solids){
+    if(P.pos.x>s.x0-P.R&&P.pos.x<s.x1+P.R&&P.pos.z>s.z0-P.R&&P.pos.z<s.z1+P.R
+       &&s.y0>=P.pos.y+0.6&&s.y0<P.pos.y+P.H){P.pos.y=s.y0-P.H;P.vel.y=0;}
+  }
+  camera.position.set(P.pos.x,P.pos.y+P.EYE,P.pos.z);
+  camera.rotation.set(0,0,0);camera.rotateY(P.yaw);camera.rotateX(P.pitch);
+}
+
+/* ============================== SKY / SUN / STARS ============================== */
+const skyU={top:{value:C(0x4a6aa8)},hor:{value:C(0xd8c0a0)},sunDir:{value:new THREE.Vector3(0,1,0)},
+  sunCol:{value:C(0xffdcb0)},sunAmt:{value:1}};
+const sky=new THREE.Mesh(new THREE.SphereGeometry(680,32,16),new THREE.ShaderMaterial({
+  side:THREE.BackSide,depthWrite:false,fog:false,uniforms:skyU,
+  vertexShader:`varying vec3 vP;void main(){vP=normalize(position);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`varying vec3 vP;uniform vec3 top,hor,sunDir,sunCol;uniform float sunAmt;
+    void main(){float h=clamp(vP.y,0.,1.);vec3 c=mix(hor,top,pow(h,.55));
+    float s=max(dot(vP,normalize(sunDir)),0.);
+    c+=sunCol*pow(s,650.)*4.*sunAmt; c+=sunCol*pow(s,14.)*.32*sunAmt;
+    gl_FragColor=vec4(c,1.);}`}));
+sky.renderOrder=-2;scene.add(sky);
+// stars
+{const n=900,pos=new Float32Array(n*3);
+ for(let k=0;k<n;k++){const a=rnd(Math.PI*2),e=Math.acos(rnd(1))*0.98;
+   pos[k*3]=Math.cos(a)*Math.sin(e)*640;pos[k*3+1]=Math.cos(e)*640+30;pos[k*3+2]=Math.sin(a)*Math.sin(e)*640;}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.BufferAttribute(pos,3));
+ var stars=new THREE.Points(g,new THREE.PointsMaterial({color:0xcfd8ff,size:1.6,sizeAttenuation:false,
+   transparent:true,opacity:0,fog:false,depthWrite:false}));
+ scene.add(stars);}
+const sun=new THREE.DirectionalLight(0xffe0b8,2.4);
+sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-85;sun.shadow.camera.right=85;sun.shadow.camera.top=85;sun.shadow.camera.bottom=-85;
+sun.shadow.camera.near=20;sun.shadow.camera.far=420;sun.shadow.bias=-0.0016;sun.shadow.normalBias=0.4;
+scene.add(sun);scene.add(sun.target);
+const moon=new THREE.DirectionalLight(0x8fa5d8,0);scene.add(moon);scene.add(moon.target);
+const hemi=new THREE.HemisphereLight(0xbcd0ec,0x5d5344,0.7);scene.add(hemi);
+
+/* Day-night palette: k = sun elevation (-1..1) */
+function pal(k){
+  const stops=[
+    [-0.45,{top:0x070a18,hor:0x11182c,sun:0x000000,si:0,hi:0.13,fog:0x0d1322,fd:0.0052,st:1,ex:0.9}],
+    [-0.14,{top:0x0d1330,hor:0x2c2b4a,sun:0x804a30,si:0,hi:0.16,fog:0x1b1c33,fd:0.0060,st:0.8,ex:0.95}],
+    [-0.03,{top:0x252c55,hor:0xb15330,sun:0xff7838,si:0.4,hi:0.24,fog:0x6b4638,fd:0.0072,st:0.25,ex:1}],
+    [ 0.06,{top:0x3d5183,hor:0xf2a057,sun:0xffb46a,si:1.8,hi:0.42,fog:0xc99a70,fd:0.0062,st:0,ex:1.05}],
+    [ 0.22,{top:0x4a6aa8,hor:0xe8cfa8,sun:0xffd9a8,si:2.6,hi:0.72,fog:0xcdbfa4,fd:0.0042,st:0,ex:1.05}],
+    [ 0.60,{top:0x5580c2,hor:0xd5dde2,sun:0xfff2dc,si:3.0,hi:1.0,fog:0xc9d2d8,fd:0.0028,st:0,ex:1.02}]];
+  let a=stops[0],b=stops[stops.length-1];
+  for(let q=0;q<stops.length-1;q++)if(k>=stops[q][0]&&k<=stops[q+1][0]){a=stops[q];b=stops[q+1];break;}
+  if(k<stops[0][0])return a[1];if(k>b[0]??false)return b[1];
+  const t=clamp((k-a[0])/(b[0]-a[0]||1),0,1),A=a[1],B=b[1],o={};
+  for(const key of['top','hor','sun','fog'])o[key]=C(A[key]).lerp(C(B[key]),t);
+  for(const key of['si','hi','fd','st','ex'])o[key]=lerp(A[key],B[key],t);
+  return o;
+}
+/* ============================== WORLD: GROUND ============================== */
+const B=new Builder();
+// world bounds (invisible)
+addSolid(-205,-10,-15,2,90,300); addSolid(115,-10,-15,2,90,300);
+addSolid(-45,-10,-152,340,90,2); addSolid(-45,-10,124,340,90,2);
+
+// tree positions decided before painting the ground (leaf litter goes under them)
+const TREES=[];
+{ // Arts Quad rows + scattered
+  for(let x=-56;x<=56;x+=14){TREES.push([x+rnd(-2,2),-46+rnd(-2,2)]);TREES.push([x+rnd(-2,2),46+rnd(-2,2)]);}
+  for(let z=-36;z<=36;z+=13){TREES.push([-62+rnd(-2,2),z+rnd(-2,2)]);TREES.push([64+rnd(-2,2),z+rnd(-2,2)]);}
+  for(let k=0;k<14;k++){const x=rnd(-50,50),z=rnd(-40,40);
+    if(Math.abs(x)>12||Math.abs(z)>12)TREES.push([x,z]);}
+  for(let k=0;k<26;k++)TREES.push([rnd(-160,-84),rnd(-70,90)]);          // slope
+  for(let k=0;k<12;k++)TREES.push([rnd(-60,90),rnd(-100,-64)]);          // toward Risley/gorge
+  for(let k=0;k<10;k++)TREES.push([rnd(8,95),rnd(30,100)]);              // near Sage
+}
+const inBuilding=(x,z)=>
+  (x>-79&&x<-33&&z>16&&z<44)||(x>-59&&x<-45&&z>-13&&z<1)||   // Uris, McGraw
+  (x>26&&x<46&&z>42&&z<82)||(x>-16&&x<32&&z>-95&&z<-73)||    // Sage, Risley
+  (x>20&&x<32&&z>10&&z<22)||(x>-10&&x<2&&z>-74&&z<-62);      // tunnel huts
+for(let k=TREES.length-1;k>=0;k--){const[x,z]=TREES[k];
+  if(inBuilding(x,z)||(Math.abs(x)<10&&Math.abs(z)<10))TREES.splice(k,1);}
+
+// ---- painted ground texture (grass, paths, rock, leaf litter) ----
+const GW=2048,GH=1664,gc=document.createElement('canvas');gc.width=GW;gc.height=GH;
+const g2=gc.getContext('2d');
+const gx=x=>(x+240)/360*GW, gz=z=>(z+160)/290*GH, gs=m=>m/360*GW; // meters→px
+g2.fillStyle='#697538';g2.fillRect(0,0,GW,GH);
+for(let k=0;k<9000;k++){ // mottled autumn turf, greener per the reference photos
+  const c=['#71803f','#657236','#7c8444','#5d6b31','#7d7a3c','#556327'][k%6];
+  g2.fillStyle=c;g2.globalAlpha=rnd(.25,.7);
+  const r=rnd(6,30);g2.fillRect(rnd(GW),rnd(GH),r,r*rnd(.5,1.2));}
+g2.globalAlpha=1;
+for(let x=-62;x<62;x+=8){ // mow stripes on the quad
+  g2.fillStyle='rgba(255,255,235,0.05)';g2.fillRect(gx(x),gz(-46),gs(4),gz(46)-gz(-46));}
+// gorge rock band (north) + lake bed (west)
+{const grd=g2.createLinearGradient(0,gz(-104),0,gz(-130));
+ grd.addColorStop(0,'rgba(90,84,72,0)');grd.addColorStop(.45,'#5a5448');grd.addColorStop(1,'#3d3a33');
+ g2.fillStyle=grd;g2.fillRect(0,0,GW,gz(-104));g2.fillStyle='#3d3a33';g2.fillRect(0,0,GW,gz(-130));}
+{const grd=g2.createLinearGradient(gx(-168),0,gx(-205),0);
+ grd.addColorStop(0,'rgba(96,92,60,0)');grd.addColorStop(1,'#6a5f45');
+ g2.fillStyle=grd;g2.fillRect(0,0,gx(-160),GH);}
+// paths
+function path(pts,w,col='#9b917d'){g2.strokeStyle=col;g2.lineWidth=gs(w);g2.lineCap='round';g2.lineJoin='round';
+  g2.beginPath();g2.moveTo(gx(pts[0][0]),gz(pts[0][1]));
+  for(let k=1;k<pts.length;k++)g2.lineTo(gx(pts[k][0]),gz(pts[k][1]));g2.stroke();}
+path([[-58,-42],[58,42]],3.4); path([[-58,42],[58,-42]],3.4);        // quad X
+path([[-58,0],[58,0]],3);                                            // quad E-W
+path([[0,-48],[0,48]],3);                                            // quad N-S
+path([[-66,-44],[66,-44],[66,44],[-66,44],[-66,-44],[-66,44]],2.6);  // perimeter
+path([[-24,30],[-33,30]],3.2); path([[-40,-6],[-46,-6]],2.6);        // to Uris, McGraw
+path([[24,12],[21,16]],2.2);                                         // to tunnel hut A
+path([[36,20],[36,44]],3); path([[0,44],[36,44]],2.6);               // to Sage
+path([[0,-48],[-8.5,-58],[-8.5,-68],[-4,-70],[8,-74]],3);            // to Risley + hut B
+path([[-66,4],[-80,6],[-96,14],[-118,26],[-140,22],[-160,10],[-178,-2]],2.8,'#8f8672'); // slope switchback
+path([[-80,6],[-92,-12],[-112,-26]],2);                              // slope fork
+// door plazas
+g2.fillStyle='#9b917d';
+for(const[px,pz,r]of[[-34,30,5],[-46,-6,3],[36,45,4.5],[8,-74,4],[22,16,3],[-4,-69.7,3],[0,0,7]])
+  {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
+// leaf litter under trees
+for(const[tx,tz]of TREES)for(let k=0;k<26;k++){
+  g2.fillStyle=['#b0501f','#c26a22','#a8752a','#8f3e18','#c98f2e'][k%5];g2.globalAlpha=rnd(.3,.85);
+  const a=rnd(Math.PI*2),d=rnd(1,5.2);
+  g2.fillRect(gx(tx)+Math.cos(a)*gs(d),gz(tz)+Math.sin(a)*gs(d)*0.9,gs(rnd(.22,.5)),gs(rnd(.18,.4)));}
+g2.globalAlpha=1;
+const groundTex=new THREE.CanvasTexture(gc);groundTex.colorSpace=THREE.SRGBColorSpace;
+groundTex.anisotropy=8;
+{const geo=new THREE.PlaneGeometry(360,290,190,150);geo.rotateX(-Math.PI/2);geo.translate(-60,0,-15);
+ const pos=geo.attributes.position;
+ for(let k=0;k<pos.count;k++)pos.setY(k,terrainH(pos.getX(k),pos.getZ(k)));
+ geo.computeVertexNormals();
+ const ground=new THREE.Mesh(geo,new THREE.MeshStandardMaterial({map:groundTex,roughness:1}));
+ ground.receiveShadow=true;scene.add(ground);}
+// Cayuga Lake
+const water=new THREE.Mesh(new THREE.PlaneGeometry(240,300),
+  new THREE.MeshStandardMaterial({color:0x2e4a63,roughness:.18,metalness:.55}));
+water.rotation.x=-Math.PI/2;water.position.set(-322,-24.6,-15);scene.add(water);
+
+/* ============================== TREES / LAMPS / BENCHES ============================== */
+const FALL=[0xc0511f,0xd07a22,0xdca02c,0x9c6c20,0xa8391a,0xb98a26];
+function tree(x,z){
+  const y=terrainH(x,z),s=rnd(.75,1.35),th=rnd(3.2,4.6)*s;
+  B.cyl(x,y+th/2,z,0.16*s,0.3*s,th,6,0x4a3b28);
+  if(Math.random()<0.14){ // the occasional dark conifer
+    B.cyl(x,y+th+1.8*s,z,0.05,1.7*s,4.2*s,7,0x2c4028);
+    B.cyl(x,y+th-0.4*s,z,0.4,2.3*s,2.6*s,7,0x314832);return;}
+  const col=FALL[(Math.random()*FALL.length)|0],n=2+(Math.random()*3|0);
+  for(let k=0;k<n;k++){
+    const dy=rnd(-.3,1.4),pick=Math.random()<.3?FALL[(Math.random()*FALL.length)|0]:col;
+    const shade=0.68+0.34*((dy+0.3)/1.7);                       // canopy: lit crown, shaded skirt
+    B.sph(x+rnd(-1.1,1.1)*s,y+th+dy*s,z+rnd(-1.1,1.1)*s,rnd(2.4,3.6)*s,
+      C(pick).multiplyScalar(shade),{sy:rnd(.7,.95)});}
+}
+for(const[x,z]of TREES)tree(x,z);
+
+const LAMPS=[];
+{const spots=[[-30,-22],[30,-22],[-30,22],[30,22],[2.5,-46],[2.5,46],[-56,2.5],[58,2.5],
+  [-30,33.5],[-44,-14],[26,38],[32.8,41.5],[10,-58],[-4,-72],[4,-72],[22,10],
+  [-82,6],[-104,20],[-126,26],[-148,16],[-168,2],[-96,-14],[64,-44],[64,44],[-66,-44]];
+ for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
+   B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
+   B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
+   B.box(x,y+4.18,z,0.42,0.5,0.42,0xffdf9a,{ch:'glowNight'});
+   B.box(x,y+4.5,z,0.52,0.14,0.52,0x22252c);
+   B.cyl(x,y+4.66,z,0.02,0.1,0.2,4,0x22252c);}}
+function bench(x,z,ry){const y=terrainH(x,z);
+  for(const dx of[-0.75,0.75]){
+    const c=Math.cos(ry),s=Math.sin(ry);
+    B.box(x+dx*c,y+0.24,z-dx*s,0.08,0.48,0.5,0x2f2a24,{ry});}
+  B.box(x,y+0.5,z,1.9,0.07,0.55,0x6b4f30,{ry,solid:true});
+  B.box(x,y+0.82,z,1.9,0.4,0.08,0x6b4f30,{ry,rx:0});
+}
+for(const[x,z,r]of[[-14,-13,0],[14,-13,Math.PI],[-14,13,0],[14,13,Math.PI],
+  [-83,2,-0.5],[-85,12,-0.6],[-106,24,-0.7],[-127,30,-0.6],[54,-40,0],[30,42,0]])bench(x,z,r);
+
+/* ============================== THE TWO STATUES ============================== */
+function pedestal(x,z,ry){const y=terrainH(x,z);
+  B.box(x,y+0.25,z,3.4,0.5,3.4,0x8d8a80,{ry,solid:true});
+  B.box(x,y+0.7,z,2.6,0.5,2.6,0x8d8a80,{ry,solid:true});
+  B.box(x,y+1.55,z,1.9,1.4,1.9,0x77746a,{ry,solid:true});
+  B.box(x,y+2.32,z,2.2,0.18,2.2,0x8d8a80,{ry});
+  return y+2.41;}
+const BRONZE=0x5d5443,PATINA=0x66705c;
+{ // Ezra Cornell — standing, coat and cane, west side facing east
+  const x=-20,z=-2,ry=Math.PI/2,top=pedestal(x,z,ry);
+  B.box(x,top+0.55,z,0.44,1.1,0.5,BRONZE,{ry});                    // legs/coat skirt
+  B.box(x,top+1.45,z,0.62,0.85,0.55,BRONZE,{ry});                  // torso/greatcoat
+  B.box(x,top+1.15,z,0.7,0.2,0.6,PATINA,{ry});                     // coat hem
+  B.box(x+0.12,top+1.5,z-0.32,0.2,0.75,0.2,BRONZE,{ry});           // arm L
+  B.box(x+0.2,top+1.35,z+0.34,0.2,0.85,0.2,BRONZE,{ry,rz:0.35});   // arm on cane
+  B.cyl(x+0.34,top+0.55,z+0.42,0.03,0.03,1.1,5,BRONZE);            // cane
+  B.sph(x,top+2.12,z,0.34,BRONZE);                                  // head
+  B.box(x,top+2.34,z,0.42,0.1,0.42,BRONZE,{ry});                   // hat brim
+  B.cyl(x,top+2.5,z,0.16,0.17,0.26,7,BRONZE);                      // hat
+}
+{ // Andrew Dickson White — seated in his chair, east side facing west
+  const x=20,z=-2,ry=-Math.PI/2,top=pedestal(x,z,ry);
+  B.box(x+0.25,top+0.5,z,0.65,1.0,0.85,0x4e463a,{ry});             // chair
+  B.box(x+0.52,top+1.25,z,0.14,1.5,0.85,0x4e463a,{ry});            // chair back
+  B.box(x-0.05,top+0.78,z,0.5,0.35,0.55,BRONZE,{ry});              // lap
+  B.box(x-0.28,top+0.35,z,0.22,0.7,0.5,BRONZE,{ry});               // shins
+  B.box(x+0.18,top+1.28,z,0.5,0.75,0.5,BRONZE,{ry});               // torso
+  B.box(x,top+1.15,z,0.6,0.16,0.6,PATINA,{ry});                    // open book
+  B.sph(x+0.16,top+1.9,z,0.32,BRONZE);                              // head
+  B.sph(x+0.13,top+1.72,z,0.3,BRONZE,{sy:0.5});                     // beard
+}
+/* ============================== ARCHITECTURE HELPERS ============================== */
+// wall along local +x, optional door gap {off,w,h}
+function wallD(cx,cy,cz,len,h,t,ry,color,door){
+  if(!door){B.box(cx,cy+h/2,cz,len,h,t,color,{ry,solid:true});return;}
+  const{off=0,w,h:dh}=door,c=Math.cos(ry),s=Math.sin(ry);
+  const seg=(lc,ll)=>ll>0.02&&B.box(cx+lc*c,cy+h/2,cz-lc*s,ll,h,t,color,{ry,solid:true});
+  seg((-len/2+(len/2+off-w/2)/2),(len/2+off-w/2));
+  seg(( len/2-(len/2-off-w/2)/2),(len/2-off-w/2));
+  B.box(cx+off*c,cy+dh+(h-dh)/2,cz-off*s,w,h-dh,t,color,{ry,solid:true});
+}
+// glowing gothic window, placed proud of a wall face
+function gwin(x,y,z,w,h,ry,ch='glowNight'){
+  B.box(x,y,z,w,h,0.16,0x3a3630,{ry});
+  B.box(x,y,z,w-0.26,h-0.26,0.22,0xffd9a0,{ry,ch});
+  B.box(x,y+h/2+0.12,z,w+0.3,0.24,0.26,0x6e685c,{ry});
+  B.box(x,y-h/2-0.1,z,w+0.3,0.2,0.3,0x6e685c,{ry});
+}
+const BOOKCOLS=[0x7a2e20,0x2e4a3a,0x27355c,0x6e5626,0x503050,0x844426,0x37536b,0x5c2430,0x746c58];
+function bookRun(x0,x1,y,z){let x=x0+rnd(0,.1);
+  while(x<x1-0.2){const w=rnd(0.3,0.9),h=rnd(0.26,0.4);
+    B.box(x+w/2,y+h/2,z,w-0.06,h,0.26,BOOKCOLS[(Math.random()*BOOKCOLS.length)|0]);x+=w;}}
+
+/* ============================== URIS LIBRARY — A.D. WHITE READING ROOM ============================== */
+{
+  const X0=-77,X1=-35,Z0=18,Z1=42,MX=(X0+X1)/2,MZ=(Z0+Z1)/2,WH=13;
+  const STONE=0xb0a183,TRIM=0xc6b89a,CREAM=0xd8b183,IRON=0x36302a,OAK=0x6a4c2c,FLOOR=0.4;
+  // shell
+  wallD(MX,0,Z0+0.5,X1-X0,WH,1,0,STONE);                                  // north
+  wallD(MX,0,Z1-0.5,X1-X0,WH,1,0,STONE);                                  // south
+  wallD(X0+0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,STONE);                          // west
+  wallD(X1-0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,STONE,{off:0,w:2.6,h:3.6});      // east + door
+  B.box(MX,FLOOR/2,MZ,X1-X0,FLOOR,Z1-Z0,0x6e5638,{solid:true});           // raised floor
+  B.box(X1+0.9,0.09,MZ,1.8,0.18,4.4,0x9b917d,{solid:true});               // entry steps
+  B.box(X1+0.35,0.27,MZ,0.9,0.18,4.4,0x9b917d,{solid:true});
+  B.box(MX,WH+0.4,MZ,X1-X0+1.2,0.8,Z1-Z0+1.2,TRIM);                       // cornice
+  B.wedge(MX,WH+0.8,MZ,X1-X0+0.6,4.6,Z1-Z0+0.6,0x4c453c);                 // slate roof
+  for(let x=X0+3;x<X1-1;x+=6){B.box(x,WH/2,Z0-0.15,1.1,WH,0.5,TRIM);B.box(x,WH/2,Z1+0.15,1.1,WH,0.5,TRIM);
+    B.box(x,1.4,Z0-0.4,1.7,2.8,1.0,TRIM,{solid:true});B.box(x,1.4,Z1+0.4,1.7,2.8,1.0,TRIM,{solid:true});} // buttresses
+  for(let x=X0+6;x<X1-2;x+=6){gwin(x,8.6,Z0-0.12,1.7,4.4,0);gwin(x,8.6,Z1+0.12,1.7,4.4,0);}   // high exterior windows
+  gwin(X1+0.12,8.2,MZ,3.6,5,Math.PI/2); gwin(X0-0.12,7.6,MZ,4.2,6,Math.PI/2);                 // gable windows
+  B.box(X1+0.14,4.6,MZ,3.4,1.4,0.5,TRIM);                                                     // door hood
+  // ---- interior: three tiers of white iron stacks (north & south walls) ----
+  const tiers=[FLOOR,3.4,6.4],GAL=1.7;
+  for(const side of[-1,1]){ // -1 north, +1 south
+    const wz=side<0?Z0+1:Z1-1, shelfZ=side<0?wz+0.75:wz-0.75, galZ=side<0?wz+GAL:wz-GAL;
+    for(let ti=0;ti<tiers.length;ti++){const ty=tiers[ti];
+      // shelves + books
+      for(const sy of[0.35,0.85,1.35,1.85])
+        {B.box(MX,ty+sy-0.03,shelfZ,X1-X0-4,0.06,0.6,0x5c452a);bookRun(X0+2.2,X1-2.2,ty+sy,shelfZ);}
+      B.box(MX,ty+1.15,wz+side*-0.1,X1-X0-4,2.3,0.25,0x5c452a);            // shelf back
+      for(let x=X0+2.2;x<=X1-2.2;x+=4.1)B.box(x,ty+1.15,shelfZ,0.1,2.3,0.66,0x4c3820,{solid:ti===0});
+      if(ti>0){ // gallery floor, iron columns, railing (gap where the stair arrives)
+        B.box(MX,ty-0.09,(wz+galZ)/2,X1-X0-2.4,0.18,GAL,0x6a4c34,{solid:true});
+        B.box(MX,ty+0.005,(wz+galZ)/2,X1-X0-2.8,0.02,GAL-0.5,0x7c221e);        // red gallery runner
+        const segs=(side>0&&ti===1)?[[X0+3.0,X1-1.2]]:[[X0+1.2,X1-1.2]];
+        for(const[ra,rb]of segs){const rc=(ra+rb)/2,rl=rb-ra;
+          B.box(rc,ty+0.5,galZ+side*-0.03,rl,1.0,0.06,IRON,{solid:true});
+          B.box(rc,ty+1.02,galZ+side*-0.03,rl,0.08,0.12,0x8a5a28);}
+        for(let x=X0+2.4;x<=X1-2.4;x+=2.05)B.cyl(x,ty-1.5,galZ,0.06,0.07,3,6,IRON);
+      }
+    }
+  }
+  // west-end iron stair up to the first gallery (climbs south into the railing gap)
+  {let sy=FLOOR;const sx=X0+1.9;
+   for(let s=0;s<12;s++){sy+=0.25;B.box(sx,sy-0.12,36+s*0.31,1.3,0.25,0.36,IRON,{solid:true});}
+   B.box(sx-0.72,2.2,37.7,0.06,3.4,3.8,IRON);                              // stair screen
+  }
+  // long oak tables, green banker lamps, chairs
+  for(const tx of[-66,-56,-46]){
+    B.box(tx,1.06,MZ,7,0.1,1.7,OAK,{solid:true});
+    for(const dx of[-3,3])B.box(tx+dx,0.55,MZ,0.14,1.02,1.5,0x53391f);
+    for(const dz of[-1.35,1.35])for(const dx of[-2.2,0,2.2])
+      {B.box(tx+dx,0.62,MZ+dz,0.5,0.08,0.5,0x53391f,{solid:true});
+       B.box(tx+dx,1.0,MZ+dz*1.16,0.5,0.85,0.08,0x53391f);}
+    for(const dx of[-2.4,0,2.4]){
+      B.cyl(tx+dx,1.25,MZ,0.03,0.05,0.3,5,0x8a5a28);
+      B.box(tx+dx,1.44,MZ,0.4,0.16,0.24,0x1f8a4c,{ch:'glowAlways'});}
+  }
+  // wall-to-wall crimson carpet, oak border
+  B.box(MX,FLOOR+0.02,MZ,38.4,0.05,20.4,0x571716,{solid:true});
+  B.box(MX,FLOOR+0.035,MZ,37.2,0.05,19.2,0xa82c26,{solid:true});
+  // cream ceiling slab + glowing lantern skylight beneath it
+  B.box(MX,10.9,MZ,X1-X0-1.6,3.4,Z1-Z0-1.6,CREAM);
+  B.box(MX,9.14,MZ,26,0.12,2.8,0xffe2b0,{ch:'glowAlways'});
+  for(let x=-70;x<=-42;x+=7)B.box(x,9.1,MZ,0.3,0.24,3.2,0x5c452a);        // skylight ribs
+}
+/*==URIS==*/
+/* ============================== McGRAW TOWER ============================== */
+window.__routes={};
+const clockHands=[];let bellGroup;
+{
+  const TX=-52,TZ=-6,S=11,T=0.8,H=31.5,STONE=0xb3a284,TRIM=0xc6b89a;
+  wallD(TX,0,TZ-S/2+T/2,S,H+6.5,T,0,STONE);                       // north (runs to belfry roof as pier band)
+  wallD(TX,0,TZ+S/2-T/2,S,H+6.5,T,0,STONE);
+  // belfry sides are open: side walls stop at H, corner piers continue
+  wallD(TX-S/2+T/2,0,TZ,S,H,T,Math.PI/2,STONE);
+  wallD(TX+S/2-T/2,0,TZ,S,H,T,Math.PI/2,STONE,{off:0,w:1.9,h:3.1});
+  // rebuild: knock the long north/south walls back down to H, piers above
+  // (the two tall walls above act as north/south belfry walls with arches cut visually by glow)
+  for(const[dx,dz]of[[-1,-1],[1,-1],[-1,1],[1,1]])
+    B.box(TX+dx*(S/2-0.9),H+3.2,TZ+dz*(S/2-0.9),1.8,6.4,1.8,STONE,{solid:true});   // corner piers
+  for(const side of[-1,1]){                                        // open west/east belfry arches + rails
+    B.box(TX+side*(S/2-0.3),H+0.6,TZ,0.5,1.3,S-3,TRIM,{solid:true});
+    B.box(TX+side*(S/2-0.3),H+5.6,TZ,0.6,1.6,S-2,STONE);}          // arch head band
+  B.box(TX,H+6.7,TZ,S+1.4,0.5,S+1.4,TRIM);                         // belfry cornice
+  B.cyl(TX,H+11.2,TZ,0.08,(S+0.6)/Math.SQRT2,8.6,4,0x5c6260,{ry:Math.PI/4}); // tall slate spire
+  B.cyl(TX,H+16.2,TZ,0.02,0.09,1.6,5,0x2a2620);
+  for(const[px,pz]of[[-1,-1],[1,-1],[-1,1],[1,1]])                  // corner pinnacles
+    B.cyl(TX+px*(S/2-0.6),H+7.9,TZ+pz*(S/2-0.6),0.03,0.42,2.4,5,TRIM);
+  for(const side of[-1,1])for(const off of[-3,0,3]){                // tall belfry arches (N/S faces)
+    B.box(TX+off,H+3.1,TZ+side*(S/2+0.06),1.6,4.6,0.25,0x241f1a);
+    B.box(TX+off,H+5.6,TZ+side*(S/2+0.1),2.0,0.5,0.3,TRIM);}
+  B.box(TX,H+6.95,TZ,S-2,0.5,S-2,0x3f3931);                        // belfry ceiling
+  B.box(TX,0.15,TZ,S-1,0.3,S-1,0x6f675a,{solid:true});             // ground floor
+  B.box(TX,1.2,TZ-3.2,1.4,2.4,0.8,0x6f675a,{solid:true});          // memorial plinth
+  gwin(TX-S/2-0.12,14,TZ,1.3,2.6,Math.PI/2);gwin(TX,20,TZ+S/2+0.12,1.3,2.6,0);
+  gwin(TX,8,TZ-S/2-0.12,1.3,2.6,0);gwin(TX+S/2+0.12,24,TZ,1.3,2.6,Math.PI/2);
+  // --- the 161-step square spiral ---
+  {const corners=[[3.95,3.95],[-3.95,3.95],[-3.95,-3.95],[3.95,-3.95]];  // SE,SW,NW,NE
+   let h=0.3;const wp=[[-45,TZ],[-48.5,TZ],[TX+3.95,TZ+3.4]];
+   B.box(TX+3.95,0.35,TZ+3.95,1.5,0.3,1.5,0x6f675a,{solid:true});
+   for(let f=0;f<5;f++){
+     const a=corners[f%4],b=corners[(f+1)%4],alongX=Math.abs(b[0]-a[0])>0.1,steps=26;
+     for(let s=1;s<=steps;s++){const t=s/steps;h+=0.24;
+       const px=TX+lerp(a[0],b[0],t),pz=TZ+lerp(a[1],b[1],t);
+       B.box(px,h-0.15,pz,alongX?0.38:1.3,0.3,alongX?1.3:0.38,0x77705f,{solid:true});
+       if(s<4||s>23)continue;                                        // open at corner landings + belfry exit
+       if(alongX){const iz=TZ+(a[1]>0?a[1]-0.68:a[1]+0.68);          // inner guard rail
+         B.box(px,h+0.4,iz,0.38,1.0,0.08,0x2a2620,{solid:true});}
+       else{const ix=TX+(a[0]>0?a[0]-0.68:a[0]+0.68);
+         B.box(ix,h+0.4,pz,0.08,1.0,0.38,0x2a2620,{solid:true});}}
+     B.box(TX+b[0],h-0.12,TZ+b[1],1.5,0.3,1.5,0x6f675a,{solid:true});    // corner landing, flush with top step
+     h+=0.18;wp.push([TX+b[0],TZ+b[1]]);
+   }
+   // belfry floor: open strip above the last flight (south side), railing with west gap
+   B.box(TX,H-0.15,TZ-1.1,S-1.6,0.3,S-1.6-4.4,0x6f675a,{solid:true});
+   B.box(TX+1.05,H+0.45,TZ+2.45,S-1.6-2.6,1.2,0.1,0x2a2620,{solid:true});
+   wp.push([TX-3,TZ-2],[TX,TZ-2.5]);
+   window.__routes.towerClimb=wp;
+  }
+  // clock faces + live hands
+  const ctex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=256;
+    const x=cv.getContext('2d');x.fillStyle='#8d8577';x.fillRect(0,0,256,256);
+    x.fillStyle='#3a352c';x.beginPath();x.arc(128,128,112,0,7);x.fill();
+    x.fillStyle='#e8dcc0';x.beginPath();x.arc(128,128,100,0,7);x.fill();
+    x.strokeStyle='#2b2620';x.lineWidth=6;
+    for(let k=0;k<12;k++){const a=k/12*Math.PI*2;x.beginPath();
+      x.moveTo(128+Math.cos(a)*82,128+Math.sin(a)*82);
+      x.lineTo(128+Math.cos(a)*96,128+Math.sin(a)*96);x.stroke();}
+    x.fillStyle='#2b2620';x.beginPath();x.arc(128,128,7,0,7);x.fill();
+    const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+  const faceMat=new THREE.MeshBasicMaterial({map:ctex}),
+        handMat=new THREE.MeshBasicMaterial({color:0x1c1914});
+  for(const[px,pz,ry]of[[TX,TZ-S/2-0.06,Math.PI],[TX,TZ+S/2+0.06,0],
+                        [TX-S/2-0.06,TZ,-Math.PI/2],[TX+S/2+0.06,TZ,Math.PI/2]]){
+    const gp=new THREE.Group();gp.position.set(px,28.4,pz);gp.rotation.y=ry;scene.add(gp);
+    const face=new THREE.Mesh(new THREE.PlaneGeometry(4.4,4.4),faceMat);gp.add(face);
+    const mk=l=>{const m=new THREE.Mesh(new THREE.BoxGeometry(0.14,l,0.05),handMat);
+      m.geometry.translate(0,l/2-0.1,0);m.position.z=0.06;gp.add(m);return m;};
+    clockHands.push({hr:mk(1.15),mn:mk(1.7)});
+  }
+  // bells
+  bellGroup=new THREE.Group();bellGroup.position.set(TX,H+4.6,TZ);scene.add(bellGroup);
+  const beam=new THREE.Mesh(new THREE.BoxGeometry(7,0.4,0.5),
+    new THREE.MeshStandardMaterial({color:0x4a3626}));bellGroup.add(beam);
+  const bellMat=new THREE.MeshStandardMaterial({color:0x9a7833,metalness:0.75,roughness:0.35});
+  const prof=[[0.05,0.5],[0.16,0.46],[0.24,0.3],[0.28,0.08],[0.34,-0.15],[0.46,-0.34],[0.5,-0.44],[0.42,-0.46],[0.3,-0.42]];
+  for(let k=0;k<3;k++){const sc=[0.9,1.25,1.6][k];
+    const b=new THREE.Mesh(new THREE.LatheGeometry(prof.map(p=>new THREE.Vector2(p[0]*sc,p[1]*sc)),14),bellMat);
+    b.position.set([-2.3,0,2.3][k],-0.65*sc,0);b.userData.ph=k*1.9;bellGroup.add(b);}
+}
+/* ============================== SAGE CHAPEL ============================== */
+const stainedMats=[];
+function stainedTex(seed){
+  const w=128,h=256,cv=document.createElement('canvas');cv.width=w;cv.height=h;
+  const x=cv.getContext('2d'),R=(()=>{let s=seed;return()=>(s=s*16807%2147483647)/2147483647;})();
+  x.fillStyle='#0e0b08';x.fillRect(0,0,w,h);
+  x.save();x.beginPath();x.moveTo(9,h-6);x.lineTo(9,64);x.quadraticCurveTo(9,20,w/2,10);
+  x.quadraticCurveTo(w-9,20,w-9,64);x.lineTo(w-9,h-6);x.closePath();x.clip();
+  const cols=['#a83228','#274a9c','#d8a428','#3f7a3c','#712d7a','#c9641f','#6e9cd0','#b8452f'];
+  for(let py=6;py<h;py+=18)for(let px=6;px<w;px+=16){
+    x.fillStyle=cols[(R()*cols.length)|0];
+    x.fillRect(px+R()*3,py+R()*3,14-R()*3,16-R()*3);}
+  x.strokeStyle='#141008';x.lineWidth=3;                       // lead lines
+  for(let py=6;py<h;py+=18){x.beginPath();x.moveTo(0,py);x.lineTo(w,py);x.stroke();}
+  for(let px=6;px<w;px+=16){x.beginPath();x.moveTo(px,0);x.lineTo(px,h);x.stroke();}
+  // central medallion
+  x.translate(w/2,88);
+  for(let k=0;k<8;k++){x.fillStyle=cols[(k+seed)%cols.length];x.beginPath();x.moveTo(0,0);
+    x.arc(0,0,30,k/8*Math.PI*2,(k+1)/8*Math.PI*2);x.closePath();x.fill();x.stroke();}
+  x.fillStyle='#d8a428';x.beginPath();x.arc(0,0,9,0,7);x.fill();x.stroke();
+  x.restore();
+  x.strokeStyle='#241d12';x.lineWidth=7;                        // stone surround
+  x.beginPath();x.moveTo(9,h);x.lineTo(9,64);x.quadraticCurveTo(9,20,w/2,10);
+  x.quadraticCurveTo(w-9,20,w-9,64);x.lineTo(w-9,h);x.stroke();
+  const t=new THREE.CanvasTexture(cv);t.colorSpace=THREE.SRGBColorSpace;return t;
+}
+function stained(x,y,z,w,h,ry,seed){
+  const m=new THREE.MeshBasicMaterial({map:stainedTex(seed)});stainedMats.push(m);
+  const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,1.16),m);   // deeper than the wall: visible both sides
+  mesh.position.set(x,y,z);mesh.rotation.y=ry;scene.add(mesh);
+}
+{
+  const X0=28,X1=44,Z0=44,Z1=80,MX=36,MZ=62,WH=10;
+  const BRICK=0x8a4636,TRIM=0xc6b89a,WOOD=0x4a3626,SLATE=0x5d6570;
+  wallD(MX,0,Z0+0.5,X1-X0,WH,1,0,BRICK,{off:0,w:2.4,h:3.4});      // north entry
+  wallD(MX,0,Z1-0.5,X1-X0,WH,1,0,BRICK);                           // south (apse wall)
+  wallD(X0+0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK);
+  wallD(X1-0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK);
+  B.wedge(MX,WH,Z0+0.5,X1-X0,8.4,1,BRICK);B.wedge(MX,WH,Z1-0.5,X1-X0,8.4,1,BRICK); // steep gables
+  B.wedge(MX,WH+0.25,MZ,Z1-Z0+1.4,8.4,X1-X0+1.6,SLATE,{ry:Math.PI/2});  // steep slate roof, ridge along the nave
+  B.box(MX,WH+0.15,MZ,X1-X0+1.2,0.5,Z1-Z0+1.2,TRIM);               // cornice
+  for(const by of[3.35,6.9])B.box(MX,by,MZ,X1-X0+0.14,0.35,Z1-Z0+0.14,TRIM);  // polychrome stone bands
+  // west transept: gabled mass carrying the great window toward the quad
+  B.box(26.3,4.5,MZ,3.8,9,12,BRICK,{solid:true});
+  B.box(26.3,3.35,MZ,3.94,0.35,12.14,TRIM);B.box(26.3,6.9,MZ,3.94,0.35,12.14,TRIM);
+  B.wedge(26.3,9,MZ,4.0,6.2,12.4,SLATE);
+  stained(24.35,5.4,MZ,4.4,6.2,Math.PI/2,53);                      // transept great window
+  B.box(24.3,9.1,MZ,0.4,1.2,1.6,TRIM);                             // window hood
+  for(const dz of[-10,0,10])for(const s of[-1,1]){                  // roof dormers
+    B.box(MX+s*5.1,13.6,MZ+dz,1.2,1.5,1.3,BRICK);
+    B.wedge(MX+s*5.1,14.35,MZ+dz,1.4,1.0,1.5,SLATE,{ry:Math.PI/2});}
+  for(let z=50;z<=76;z+=6.5){B.box(X0-0.4,1.6,z,1.0,3.2,1.5,TRIM,{solid:true});
+    B.box(X1+0.4,1.6,z,1.0,3.2,1.5,TRIM,{solid:true});
+    B.box(X0-0.2,5.4,z,0.6,5,1.1,TRIM);B.box(X1+0.2,5.4,z,0.6,5,1.1,TRIM);}   // buttresses
+  for(const px of[-2.1,2.1])B.box(MX+px,1.7,Z0-0.9,0.7,3.4,1.0,TRIM,{solid:true});       // porch pillars
+  B.box(MX,3.9,Z0-1.0,5.6,0.9,1.7,BRICK);                                                 // porch arch head
+  B.box(MX,0.1,Z0-1.6,5,0.2,2.6,0x9b917d,{solid:true});
+  // stained glass — five bays per side, the great south window, west rose over entry
+  let sd=3;
+  for(let z=48.5;z<=76;z+=6.5){stained(X0+0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);
+    stained(X1-0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);}
+  stained(MX,6.6,Z1-0.5,7,8.4,0,97);                               // great chancel window
+  stained(MX,6.8,Z0+0.5,4.6,4.2,0,131);                            // over entry
+  // interior — floor, pews, aisle, chancel
+  B.box(MX,0.06,MZ,X1-X0-1.6,0.12,Z1-Z0-1.6,0x5c5148,{solid:true});
+  B.box(MX,0.14,(Z0+MZ)/2+4,2.6,0.06,26,0x6e1f1c,{solid:true});    // crimson aisle
+  for(let z=50;z<=71;z+=2.3)for(const sx of[-4.1,4.1]){
+    B.box(MX+sx,0.62,z,4.6,0.09,0.55,WOOD,{solid:true});           // seat
+    B.box(MX+sx,0.5,z,4.6,0.5,0.12,0x3c2c1e);                      // front panel
+    B.box(MX+sx,1.05,z+0.35,4.6,0.85,0.1,WOOD);                    // back
+    for(const ex of[-2.25,2.25])B.box(MX+sx+ex,0.65,z+0.1,0.1,1.3,0.8,0x3c2c1e);}
+  B.box(MX,0.3,76.5,10,0.35,6,0x8d8071,{solid:true});              // chancel platform
+  B.box(MX,0.62,77.5,7,0.3,3.4,0x8d8071,{solid:true});
+  B.box(MX,1.35,78,2.6,1.15,1.1,0x7c221e,{solid:true});            // altar
+  B.box(MX,1.98,78,2.8,0.12,1.25,0xc79a3a);                        // gold mensa
+  B.box(MX,3.1,78.9,0.16,1.5,0.16,0xd8b04a);B.box(MX,3.45,78.9,0.62,0.16,0.16,0xd8b04a); // cross
+  for(const cx of[-2.6,-1.8,1.8,2.6]){B.cyl(MX+cx,2.0,78.4,0.045,0.06,0.75,5,0xd8cdb4);
+    B.box(MX+cx,2.45,78.4,0.09,0.17,0.09,0xffc36a,{ch:'glowAlways'});}    // candles
+  B.box(MX,4.3,79.2,9,5.4,0.35,0xb08a3a);                          // gold mosaic apse wall
+  B.box(MX,7.4,79.1,7,0.8,0.3,0xd8b465,{ch:'glowAlways'});         // mosaic shimmer band
+  // timber vault: sloped planes + pointed ribs
+  for(const s of[-1,1])B.box(MX+s*3.9,11.9,MZ,8.6,0.28,Z1-Z0-1.2,WOOD,{rz:s*0.52});
+  for(let z=48;z<=78;z+=4.4)for(const s of[-1,1]){
+    B.box(MX+s*5.3,9.2,z,0.5,3.4,0.34,0x3c2c1e,{rz:s*0.5});
+    B.box(MX+s*2.2,12.1,z,0.5,3.6,0.34,0x3c2c1e,{rz:s*0.85});}
+  for(let z=50;z<=74;z+=8)for(const sx of[-5.5,5.5])               // wall lanterns
+    B.box(MX+sx,4.2,z,0.16,0.3,0.16,0xffc36a,{ch:'glowAlways'});
+  // organ loft over entry: pipes
+  B.box(MX,4.7,46.3,9,0.4,3,WOOD);
+  for(let k=0;k<15;k++){const px=MX-4.2+k*0.6;
+    B.cyl(px,7.2+Math.abs(7-k)*-0.18+1.4,46.5,0.14,0.14,3.4-Math.abs(7-k)*0.25,6,0xb8a660);}
+}
+/* ============================== RISLEY GREAT HALL ============================== */
+{
+  const X0=-15,X1=31,Z0=-93,Z1=-75,MX=8,MZ=-84,WH=11;
+  const STONE=0x7a7264,TRIM=0x8f887a,WOOD=0x453222;
+  wallD(MX,0,Z1-0.5,X1-X0,WH,1,0,STONE,{off:0,w:2.6,h:3.6});      // south entry
+  wallD(MX,0,Z0+0.5,X1-X0,WH,1,0,STONE);
+  wallD(X0+0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,STONE);
+  wallD(X1-0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,STONE);
+  B.box(MX,WH+0.3,MZ,X1-X0+0.8,0.6,Z1-Z0+0.8,TRIM);               // parapet band
+  for(let x=X0;x<=X1;x+=1.9){B.box(x,WH+0.95,Z0+0.3,0.9,0.7,0.7,STONE);B.box(x,WH+0.95,Z1-0.3,0.9,0.7,0.7,STONE);}
+  for(let z=Z0;z<=Z1;z+=1.9){B.box(X0+0.3,WH+0.95,z,0.7,0.7,0.9,STONE);B.box(X1-0.3,WH+0.95,z,0.7,0.7,0.9,STONE);}
+  for(const[cx,cz]of[[X0+0.6,Z0+0.6],[X1-0.6,Z0+0.6],[X0+0.6,Z1-0.6],[X1-0.6,Z1-0.6]]){
+    B.cyl(cx,6.5,cz,1.5,1.6,13.5,8,STONE,{solid:true});
+    B.cyl(cx,14.2,cz,0.1,1.8,2.6,8,0x453f36);}                    // corner turrets
+  B.wedge(MX,WH+0.5,MZ,X1-X0-2,4,Z1-Z0-2,0x3f3931);               // inner roof
+  for(let x=-10;x<=26;x+=6)gwin(x,6,Z1+0.12,2,5.4,0);             // tall south windows
+  for(let x=-10;x<=26;x+=6)gwin(x,7.5,Z0-0.12,1.6,3.4,0);
+  gwin(X1+0.12,6.5,MZ,2.4,4.6,Math.PI/2);
+  B.box(MX,4.35,Z1+0.15,3.6,1.5,0.7,TRIM);
+  B.box(MX-1.9,2.2,Z1+0.4,0.5,4.4,0.8,TRIM,{solid:true});B.box(MX+1.9,2.2,Z1+0.4,0.5,4.4,0.8,TRIM,{solid:true});
+  B.box(MX,0.1,Z1+1.3,5.4,0.2,2.2,0x9b917d,{solid:true});         // entry steps
+  // interior
+  B.box(MX,0.08,MZ,X1-X0-1.6,0.16,Z1-Z0-1.6,0x5f574c,{solid:true});
+  B.box(X0+3,0.36,MZ,4.4,0.4,13,0x6a6157,{solid:true});           // dais (west end)
+  B.box(X0+3,1.14,MZ,1.6,0.12,9,WOOD,{solid:true});               // head table
+  for(const dz of[-3.4,0,3.4])B.box(X0+3.9,0.9,MZ+dz,0.55,1.15,0.6,0x33261a);
+  for(const tz of[-87.6,-80.4]){                                   // the long tables
+    B.box(11,0.92,tz,32,0.1,1.5,WOOD,{solid:true});
+    for(let x=-3;x<=25;x+=7)B.box(x,0.45,tz,0.9,0.85,1.3,0x33261a);
+    for(const bz of[-1.35,1.35])B.box(11,0.5,tz+bz,31,0.08,0.42,0x5a4530,{solid:true});
+    for(let x=-2;x<=24;x+=4.5){B.cyl(x,1.12,tz,0.05,0.07,0.22,5,0x8a6b30);
+      B.box(x,1.32,tz,0.08,0.16,0.08,0xffc36a,{ch:'glowAlways'});} // candlesticks
+  }
+  // hearth on north wall
+  B.box(20,1.9,Z0+1.2,5,3.8,1.6,0x655c50,{solid:true});
+  B.box(20,4.6,Z0+1.1,6,1.4,1.9,TRIM);
+  B.box(20,1.1,Z0+1.85,3,2.2,0.4,0x17110c);
+  B.box(20,0.75,Z0+1.9,2.4,1.3,0.35,0xff9838,{ch:'glowAlways'});   // fire
+  B.box(20,0.35,Z0+1.95,2.8,0.5,0.4,0x2b1d12);                     // logs
+  // hammer-beam trusses + banners + chandeliers
+  const BAN=[0x7c1c1e,0xb8862b,0x274a35,0x2c3a63,0x5c2430];
+  for(let x=-11;x<=27;x+=4.6){
+    for(const s of[-1,1]){
+      B.box(x,8.4,MZ+s*4.6,0.5,0.6,4.2,WOOD,{rx:s*0.42});          // arched beams
+      B.box(x,5.9,MZ+s*7.7,0.5,3.4,0.5,WOOD);                      // wall posts
+      B.box(x,7.05,MZ+s*6.6,0.5,0.5,2.6,WOOD,{rx:s*0.75});}        // braces
+    B.box(x,9.55,MZ,0.5,0.5,3.4,WOOD);                             // collar
+    if(x>-9&&x<26){B.box(x,7.2,MZ+2.6,0.09,2.6,1.4,BAN[((x+11)/4.6|0)%5]);}
+  }
+  for(const s of[-1,1])B.box(MX,9.4,MZ+s*4.4,X1-X0-2,0.26,7.4,0x352a1d,{rx:s*0.5}); // plank ceiling
+  for(const cx of[-4,8,20]){                                       // candle ring chandeliers
+    B.cyl(cx,6.2,MZ,0.9,0.9,0.14,10,0x241d14);
+    B.cyl(cx,7.9,MZ,0.02,0.02,3.4,4,0x241d14);
+    for(let k=0;k<6;k++){const a=k/6*Math.PI*2;
+      B.box(cx+Math.cos(a)*0.8,6.45,MZ+Math.sin(a)*0.8,0.09,0.22,0.09,0xffc36a,{ch:'glowAlways'});}}
+}
+/* ============================== THE STEAM TUNNELS ============================== */
+// Network: hut A (26,16) → stair down east → leg1 south (x≈34, z 17.2→28.8)
+// → leg2 west (z≈30, x 32.8→-2.8) → leg3 north (x≈-4, z 28.8→-58.8)
+// → boiler room off west side (z -26..-15) → stair up north → hut B (-4,-66)
+const STEAMVENTS=[];
+{
+  const FL=-6,HT=2.6,CON=0x5a5750,DK=0x47443e,WALLH=HT+1.6;
+  const wall=(cx,cz,len,alongX)=>B.box(cx,FL+WALLH/2-0.3,cz,alongX?len:0.8,WALLH,alongX?0.8:len,CON,{solid:true});
+  const slab=(cx,cz,w,d,top)=>B.box(cx,top-0.25,cz,w,0.5,d,DK,{solid:true});
+  // surface huts (hut B is open both ends: bulkhead corridor joins from the south)
+  for(const[hx,hz,doorSides]of[[26,16,['W']],[-4,-66,['N','S']]]){
+    const w=4.6;
+    for(const[dx,dz,ry,side]of[[0,-w/2,0,'N'],[0,w/2,0,'S'],[-w/2,0,Math.PI/2,'W'],[w/2,0,Math.PI/2,'E']])
+      wallD(hx+dx,0,hz+dz,w,3,0.5,ry,0x6e5340,doorSides.includes(side)?{off:0,w:2.0,h:2.5}:undefined);
+    B.wedge(hx,3,hz,w+1.2,1.4,w+1.2,0x3a352d);
+    B.box(hx,2.72,hz,0.5,0.3,0.5,0xffd9a0,{ch:'glowNight'});       // lamp under the eave
+  }
+  g2.fillStyle='#181613';g2.fillRect(gx(24.4),gz(14.6),gx(33.5)-gx(24.4),gz(17.4)-gz(14.6));
+  g2.fillRect(gx(-6),gz(-64.2),gx(-2)-gx(-6),gz(-56.6)-gz(-64.2));
+  groundTex.needsUpdate=true;
+  // stair A: starts just inside hut A's door, descends east under a grade-level apron
+  B.box(24.25,-0.02,16,0.7,0.25,3.0,0x6b6b66,{solid:true});        // door sill
+  for(let s=0;s<24;s++)B.box(24.6+s*0.31,-0.25*(s+1)-0.12,16,0.36,0.25,1.9,0x615e56,{solid:true});
+  B.box(30.8,-0.1,16,6.2,0.5,4.6,CON,{solid:true});                // concrete apron over the shaft
+  B.box(32.1,FL-0.25,16,2.6,0.5,3.2,DK,{solid:true});              // floor patch at stair foot
+  wall(29.8,14.4,11.6,true);                                        // shaft north cheek x 24..35.6
+  wall(28.4,17.6,8.8,true);                                         // shaft south cheek x 24..32.8
+  // stair B: rises north inside a concrete bulkhead, tops out inside hut B
+  for(let s=0;s<24;s++)B.box(-4,-6+0.25*(s+1)-0.12,-56.9-s*0.31,1.9,0.25,0.36,0x615e56,{solid:true});
+  B.box(-5.9,-1.95,-60.2,0.6,8.7,7.4,CON,{solid:true});            // bulkhead cheeks (below+above grade)
+  B.box(-2.1,-1.95,-60.2,0.6,8.7,7.4,CON,{solid:true});
+  B.box(-4,2.55,-59.95,4.6,0.5,6.9,CON,{solid:true});              // bulkhead roof
+  B.box(-4,1.3,-56.8,4.6,3.0,0.6,CON,{solid:true});                // bulkhead south headwall
+  B.box(-4,0.02,-66.9,3.6,0.25,2.6,0x6b6b66,{solid:true});         // hut B floor pad
+  // floors & ceilings
+  slab(34,23,3.4,16.8,FL); slab(15,30,41,3.4,FL); slab(-4,-15.2,3.4,88.8,FL); slab(-10,-20.5,10.4,12,FL);
+  slab(34,23,3.4,16.8,FL+HT+0.5); slab(15,30,42,3.4,FL+HT+0.5);
+  slab(-4,-13.6,3.4,85.8,FL+HT+0.5); slab(-10,-20.5,10.4,12,FL+HT+0.9);
+  // corridor walls
+  wall(32.4,23.2,11.2,false);                                       // leg1 west  z 17.6..28.8
+  wall(35.6,23,17.2,false);                                         // leg1+turn1 east z 14.4..31.6
+  wall(15,31.6,41.2,true);                                          // leg2 south x -5.6..35.6
+  wall(15,28.4,35.6,true);                                          // leg2 north x -2.8..32.8
+  wall(-2.4,-14.1,85,false);                                        // leg3 east z -56.6..28.4
+  wall(-5.6,6.9,43.8,false);                                        // leg3 west z -15..28.8
+  wall(-5.6,-41.3,30.6,false);                                      // leg3 west z -56.6..-26
+  // boiler room (x -14.8..-5.2, z -26..-15)
+  wall(-15.2,-20.5,12.2,false);wall(-10.2,-26.4,10.8,true);wall(-10.2,-14.6,10.8,true);
+  const boiler=(x,y,z)=>{B.cyl(x,y,z,1.25,1.25,4.6,12,0x6e4a2e,{rz:Math.PI/2,solid:true});
+    B.cyl(x-2.4,y,z,1.28,1.28,0.35,12,0x4a3a28,{rz:Math.PI/2});
+    B.cyl(x+1.4,y+1.5,z,0.2,0.2,1.6,7,0x5c5348);
+    B.box(x-1.6,y+0.4,z-1.28,0.3,0.3,0.12,0x7ec86a,{ch:'glowAlways'});};   // gauge
+  boiler(-10,-4.55,-18.2);boiler(-10,-4.55,-22.6);
+  B.cyl(-7,-3.6,-20.5,0.14,0.14,2.4,6,0x6e4a2e,{rx:Math.PI/2});
+  // pipes: big rusty runs with valve wheels
+  const pipe=(x,y,z,len,alongX,r,col)=>B.cyl(x,y,z,r,r,len,8,col,alongX?{rz:Math.PI/2}:{rx:Math.PI/2});
+  pipe(-5.0,-4.9,-15,86,false,0.24,0x6e4a2e); pipe(-5.02,-4.3,-15,86,false,0.15,0x75726a);
+  pipe(-2.98,-3.75,-15,86,false,0.11,0x8a5a28);
+  pipe(15,-4.9,31.05,40,true,0.24,0x6e4a2e);   pipe(15,-4.3,31.08,40,true,0.15,0x75726a);
+  pipe(35.05,-4.9,23,16,false,0.24,0x6e4a2e);  pipe(32.95,-4.0,23,16,false,0.12,0x8a5a28);
+  for(const[vx,vz,ax]of[[-5,-8,false],[-5,-34,false],[-5,-52,false],[8,31,true],[24,31,true],[35,20,false]]){
+    B.cyl(ax?vx:(vx<0?vx+0.55:vx-0.55),-4.35,ax?vz-0.55:vz,0.30,0.30,0.09,10,0x8a2a20,{rx:ax?0:Math.PI/2,rz:ax?Math.PI/2:0});
+    STEAMVENTS.push([ax?vx:(vx<0?vx+0.4:vx-0.4),-4.6,ax?vz-0.4:vz]);}
+  STEAMVENTS.push([-8.4,-4.4,-20.5],[-11.6,-4.4,-16.4]);
+  // caged bulbs along the ceilings
+  for(const[bx,bz]of[[34,19],[34,27],[28,30],[17,30],[6,30],[-4,24],[-4,10],[-4,-4],[-4,-18],[-4,-32],[-4,-46],[-4,-56],[-10,-20.5],[30.5,16]]){
+    B.box(bx,FL+HT-0.12,bz,0.22,0.24,0.22,0xffc36a,{ch:'glowAlways'});
+    B.box(bx,FL+HT-0.02,bz,0.34,0.06,0.34,0x2a2620);
+    for(const[cdx,cdz]of[[-0.14,0],[0.14,0],[0,-0.14],[0,0.14]])
+      B.box(bx+cdx,FL+HT-0.14,bz+cdz,0.025,0.3,0.025,0x2a2620);}
+  // drip stains + graffiti
+  const gcv=document.createElement('canvas');gcv.width=256;gcv.height=128;
+  {const x=gcv.getContext('2d');x.fillStyle='#55524b';x.fillRect(0,0,256,128);
+   x.fillStyle='#7c1c1e';x.font='bold 44px Georgia';x.fillText('GO BIG RED',12,58);
+   x.fillStyle='#c9c4b8';x.font='bold 30px Georgia';x.fillText('1865 ➔',60,102);
+   x.strokeStyle='#3a372f';for(let k=0;k<26;k++){x.beginPath();const sx=rnd(256);
+     x.moveTo(sx,0);x.lineTo(sx+rnd(-8,8),rnd(30,128));x.stroke();}}
+  const gtex=new THREE.CanvasTexture(gcv);gtex.colorSpace=THREE.SRGBColorSpace;
+  for(const[px,py,pz,ry]of[[-5.15,-4.4,-38,Math.PI/2],[-2.85,-4.6,4,-Math.PI/2],[15,-4.5,31.15,Math.PI]]){
+    const m=new THREE.Mesh(new THREE.PlaneGeometry(3.4,1.7),
+      new THREE.MeshBasicMaterial({map:gtex,color:0x8a8a8a}));
+    m.position.set(px,py,pz);m.rotation.y=ry;scene.add(m);}
+}
+window.__routes.tunnels=[[18,10],[21.5,16],[24.4,16],[27,16],[31.6,16],[33.9,16],[34,20],[34,29.8],[30,30],
+  [0,30],[-4,29],[-4,0],[-4,-13],[-4,-20.5],[-9.5,-20.5],[-4,-20.5],[-4,-50],[-4,-56.9],[-4,-63.8],[-4,-66.9],[-4,-69.8]];
+/* ============================== LIBE SLOPE VIEW: WEST CAMPUS, GORGE, LAKE ============================== */
+{ // West Campus gothic halls at the foot of the slope
+  const spots=[[-186,-34],[-178,-12],[-190,8],[-180,30],[-188,52],[-172,-46],[-170,66]];
+  for(const[hx,hz]of spots){const hy=terrainH(hx,hz),w=rnd(14,20),d=rnd(9,12),hh=rnd(8,11);
+    B.box(hx,hy+hh/2,hz,w,hh,d,0xa09378,{solid:true});
+    B.wedge(hx,hy+hh,hz,w+0.8,3.4,d+0.8,0x453f36);
+    B.box(hx+w/2-1.5,hy+hh/2+2,hz,2,hh+4,2,0x7d766a);               // tower
+    for(let k=-w/2+2;k<w/2-1;k+=3)for(const dz of[-d/2-0.06,d/2+0.06])
+      B.box(hx+k,hy+hh*0.45,hz+dz,1.0,1.6,0.14,0xffd9a0,{ch:'glowNight'});}
+}
+{ // slope overlook: low stone wall at the crest
+  const ox=-79,oz=6,oy=terrainH(ox,oz);
+  B.box(ox,oy+0.5,oz,0.6,1.0,10,0x77746a,{solid:true});
+  B.box(ox,oy+1.05,oz,0.8,0.14,10.4,0x8d8a80);
+}
+{ // gorge fence + Fall Creek below
+  for(let x=-70;x<=88;x+=4){const fy=terrainH(x,-105.5);
+    B.cyl(x,fy+0.55,-105.5,0.05,0.05,1.1,4,0x2a2620);}
+  B.box(9,terrainH(9,-105.5)+0.95,-105.5,158,0.08,0.08,0x2a2620);
+  addSolid(9,0,-105.5,158,4,0.5);                                    // invisible rail collision
+  const creek=new THREE.Mesh(new THREE.PlaneGeometry(320,9),
+    new THREE.MeshStandardMaterial({color:0x2a3b46,roughness:0.15,metalness:0.5}));
+  creek.rotation.x=-Math.PI/2;creek.position.set(-30,-21.6,-131);scene.add(creek);
+  for(let k=0;k<30;k++){const bx=rnd(-70,90),bz=rnd(-112,-124);      // gorge boulders
+    B.sph(bx,terrainH(bx,bz)+0.3,bz,rnd(0.8,2.2),0x5a5448,{sy:0.6});}
+}
+{ // far shore: lights of the west hill across Cayuga
+  for(let k=0;k<26;k++)
+    B.box(rnd(-448,-424),rnd(-23,-14),rnd(-120,100),rnd(0.6,1.4),rnd(0.6,1.2),rnd(0.6,1.4),0xffce8a,{ch:'glowNight'});
+  B.box(-450,-19,-15,40,14,300,0x1f2430);                            // west hill silhouette
+}
+/* ============================== FOG + STEAM PARTICLES ============================== */
+const puffTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=128;
+  const x=cv.getContext('2d'),g3=x.createRadialGradient(64,64,4,64,64,62);
+  g3.addColorStop(0,'rgba(255,255,255,.85)');g3.addColorStop(0.55,'rgba(255,255,255,.28)');
+  g3.addColorStop(1,'rgba(255,255,255,0)');x.fillStyle=g3;x.fillRect(0,0,128,128);
+  return new THREE.CanvasTexture(cv);})();
+const FOGS=[];
+{const zones=[[-70,90,-132,-108,26,-20.5,9],[-180,-86,-40,70,14,null,16],[-330,-215,-90,70,9,-23,22]];
+ for(const[x0,x1,z0,z1,n,fy,sc]of zones)for(let k=0;k<n;k++){
+   const m=new THREE.SpriteMaterial({map:puffTex,transparent:true,opacity:0,
+     color:0xd8dde2,depthWrite:false,fog:false});
+   const s=new THREE.Sprite(m);const px=rnd(x0,x1),pz=rnd(z0,z1);
+   s.position.set(px,(fy===null?terrainH(px,pz):fy)+rnd(1,5),pz);
+   s.scale.setScalar(rnd(sc*0.7,sc*1.5));scene.add(s);
+   FOGS.push({s,x0,x1,z0,z1,fy,vx:rnd(0.5,1.6),vz:rnd(0.3,1.0),o:rnd(0.10,0.30),ph:rnd(9)});}}
+const STEAM=[];
+for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
+  const m=new THREE.SpriteMaterial({map:puffTex,transparent:true,opacity:0.16,
+    color:0xcdd2d6,depthWrite:false});
+  const s=new THREE.Sprite(m);s.scale.setScalar(0.01);scene.add(s);
+  STEAM.push({s,vx,vy,vz,ph:rnd(1),spd:rnd(0.35,0.7),dx:rnd(-0.25,0.25),dz:rnd(-0.25,0.25)});}
+/* ============================== PASS 2: IVY, GRASS, CLOUDS, MOON, GLITTER ============================== */
+{ // ivy climbing the stone — Cornell without ivy isn't Cornell
+  const IVY=[0x3a5c34,0x4a6b3a,0x5c7a3d,0x466333];
+  function ivyPatch(cx,cy,cz,w,h,ry){
+    const c=Math.cos(ry),s=Math.sin(ry),n=8+(Math.random()*8|0);
+    for(let k=0;k<n;k++){const lx=rnd(-w/2,w/2),ly=rnd(-h/2,h/2)*(1-Math.abs(lx)/w*0.7);
+      B.box(cx+lx*c,cy+ly,cz-lx*s,rnd(0.5,1.2),rnd(0.6,1.4),0.22,IVY[(Math.random()*IVY.length)|0],{ry});}
+  }
+  ivyPatch(-34.93,4,24,4,6,Math.PI/2); ivyPatch(-34.93,5,36.5,3,7,Math.PI/2);       // Uris east face
+  ivyPatch(-52,3.5,17.9,6,5,0);                                                      // Uris north
+  ivyPatch(-46.42,4,-9,2.6,6,Math.PI/2); ivyPatch(-50,7,-0.42,4,9,0);               // McGraw base
+  ivyPatch(27.93,4,55,3,6,Math.PI/2); ivyPatch(36,4.5,79.93,6,6,0);                 // Sage
+  ivyPatch(-2,4,-74.93,5,6,0); ivyPatch(24,5,-74.93,4,7,0);                         // Risley front
+}
+{ // grass tufts on the lawns (kept off the paths)
+  const TUF=[0x9a9250,0xa89c54,0x8f8a4a,0xb0a058,0x84855c];
+  const onPath=(x,z)=>Math.abs(z-x*0.724)<2.6||Math.abs(z+x*0.724)<2.6||Math.abs(z)<2.4||Math.abs(x)<2.4;
+  let placed=0,guard=0;
+  while(placed<1500&&guard++<8000){
+    let x,z;
+    if(Math.random()<0.62){x=rnd(-62,62);z=rnd(-46,46);if(onPath(x,z)||inBuilding(x,z))continue;
+      if(Math.abs(x)<12&&Math.abs(z)<12)continue;}
+    else{x=rnd(-158,-80);z=rnd(-60,80);}
+    const y=terrainH(x,z),c=TUF[(Math.random()*TUF.length)|0],h=rnd(0.08,0.18),w=rnd(0.14,0.24),a=rnd(3.14);
+    B.box(x,y+h/2,z,w,h,0.025,c,{ry:a});B.box(x,y+h/2,z,w,h,0.025,c,{ry:a+1.57});
+    placed++;
+  }
+}
+{ // reading-room ring chandeliers
+  for(const cx of[-62,-50]){
+    B.cyl(cx,7.4,30,1.0,1.0,0.15,10,0x241d14);
+    B.cyl(cx,8.6,30,0.02,0.02,2.4,4,0x241d14);
+    for(let k=0;k<7;k++){const a=k/7*Math.PI*2;
+      B.box(cx+Math.cos(a)*0.88,7.68,30+Math.sin(a)*0.88,0.09,0.2,0.09,0xffc36a,{ch:'glowAlways'});}}
+}
+{ // PASS 3: facade articulation — the Uris east front stops being a barn
+  const TRIM=0x9c9483;
+  for(const z of[20.5,25,35,39.5])B.box(-34.75,6.5,z,0.5,13,1.0,TRIM);        // pilasters
+  B.box(-34.78,5.35,30,0.4,0.4,23.4,TRIM);                                     // string course
+  B.box(-34.78,12.6,30,0.4,0.5,23.8,TRIM);                                     // frieze band
+  gwin(-34.9,3.4,24.5,1.7,3.2,Math.PI/2); gwin(-34.9,3.4,35.5,1.7,3.2,Math.PI/2);
+  gwin(-34.9,9.1,24.5,1.4,2.8,Math.PI/2); gwin(-34.9,9.1,35.5,1.4,2.8,Math.PI/2);
+  for(const gz of[18.6,41.4]){B.box(-34.8,14.1,gz,0.9,1.1,0.9,TRIM);           // gable finials
+    B.cyl(-34.8,15.2,gz,0.03,0.22,1.2,5,TRIM);}
+  B.cyl(-34.9,18.9,30,0.03,0.2,1.3,5,TRIM);                                    // apex finial
+  B.box(-60,15.9,21,1.3,4.2,1.3,0x6e5340);B.box(-60,18.1,21,1.7,0.5,1.7,TRIM); // Uris chimneys
+  B.box(-48,16.2,38.5,1.3,4.6,1.3,0x6e5340);B.box(-48,18.6,38.5,1.7,0.5,1.7,TRIM);
+  for(const cx of[-4,16]){B.box(cx,15.3,-84,1.4,4.4,1.4,0x6a4234);             // Risley chimneys
+    B.box(cx,17.6,-84,1.8,0.5,1.8,TRIM);}
+  B.box(36,19.1,44.4,0.16,1.5,0.16,0xb8a660);B.box(36,19.4,44.4,0.7,0.16,0.16,0xb8a660); // Sage cross
+  B.box(-19.02,1.5,-2,0.1,0.42,0.68,0xffd9a0,{ch:'glowNight'});                // statue plaques
+  B.box(19.02,1.5,-2,0.1,0.42,0.68,0xffd9a0,{ch:'glowNight'});
+}
+{ // PASS 4: people on the slope (and a few on the quad), per the reference photos
+  const SKIN=[0xd8b090,0xc89878,0xa87858,0x8a6848],
+        SHIRT=[0x8a2430,0x2c4a7a,0xd8cfc0,0x3a6b48,0xc9a13a,0x6a4a8a,0xb31b1b,0x33383f],
+        PANTS=[0x2a3038,0x5a4a3a,0x3d4a5c,0x23262c];
+  const pk=a=>a[(Math.random()*a.length)|0];
+  function person(x,z,pose,ry){
+    const y=terrainH(x,z),sk=pk(SKIN),sh=pk(SHIRT),pn=pk(PANTS);
+    if(pose==='sit'){
+      B.box(x,y+0.14,z,0.34,0.28,0.3,pn,{ry});                       // hips
+      B.box(x+Math.cos(ry)*0.32,y+0.09,z-Math.sin(ry)*0.32,0.42,0.14,0.3,pn,{ry}); // legs out
+      B.box(x,y+0.5,z,0.36,0.5,0.26,sh,{ry});                        // torso
+      B.sph(x,y+0.9,z,0.22,sk);
+    }else if(pose==='lie'){
+      B.box(x,y+0.1,z,1.15,0.18,0.4,sh,{ry});
+      B.sph(x+Math.cos(ry)*0.62,y+0.16,z-Math.sin(ry)*0.62,0.2,sk);
+    }else{
+      B.box(x,y+0.42,z,0.3,0.84,0.24,pn,{ry});
+      B.box(x,y+1.12,z,0.38,0.58,0.26,sh,{ry});
+      B.sph(x,y+1.55,z,0.21,sk);
+    }
+  }
+  for(let k=0;k<26;k++){                                             // slope crowd, facing the lake
+    const x=rnd(-128,-85),z=rnd(-22,52),r=Math.random();
+    const ry=Math.PI+rnd(-0.6,0.6);
+    person(x,z,r<0.62?'sit':r<0.85?'lie':'stand',ry);
+    if(Math.random()<0.4)person(x+rnd(-1.2,1.2),z+rnd(0.7,1.4),Math.random()<0.7?'sit':'lie',ry+rnd(-0.4,0.4));
+  }
+  person(-8,4,'stand',1.2);person(-8.8,4.6,'stand',-1.8);            // quad chatters
+  person(26,-30,'stand',0.4);person(14,26,'sit',2.6);
+  // crest rail + concrete steps down the first drop
+  for(let z=12;z<=30;z+=2.2)B.cyl(-78,terrainH(-78,z)+0.5,z,0.04,0.04,1.0,4,0x2a2f36);
+  B.box(-78,terrainH(-78,21)+1.0,21,0.1,0.08,18.4,0x2a2f36);
+  {const sy=terrainH(-83.5,22);
+   for(let s=0;s<6;s++){const sx=-83.5-s*0.85,st=terrainH(sx,22);
+     const top=Math.max(st+0.1,sy-0.28*s);
+     B.box(sx,top-0.12,22,0.9,0.24,2.6,0x8f887c,{solid:true});}}
+  // three giant flame maples near the crest, like the photo
+  for(const[bx,bz,bc]of[[-90,-12,0xc0511f],[-98,36,0xd07a22],[-108,0,0xa8391a]]){
+    const by=terrainH(bx,bz);
+    B.cyl(bx,by+3.2,bz,0.42,0.62,6.4,7,0x4a3b28);
+    for(let k=0;k<6;k++){const dy2=rnd(0.5,4.5);
+      B.sph(bx+rnd(-2.6,2.6),by+5.8+dy2,bz+rnd(-2.6,2.6),rnd(4.2,5.8),
+        C(k%3?bc:0xdca02c).multiplyScalar(0.7+0.3*(dy2/4.5)),{sy:0.8});}
+  }
+}
+{ // PASS 4: reading-room furnishings — crimson wing chairs, display cases, arched end window
+  const VELVET=0x7c2028,DK=0x3c2c1e;
+  function wingChair(x,z,ry){
+    B.box(x,0.75,z,0.62,0.16,0.6,VELVET,{ry});
+    B.box(x-Math.cos(ry)*0.26,1.15,z+Math.sin(ry)*0.26,0.14,1.0,0.62,VELVET,{ry});
+    for(const s of[-1,1])B.box(x+Math.sin(ry)*s*0.28,0.95,z+Math.cos(ry)*s*0.28,0.5,0.28,0.12,VELVET,{ry});
+    B.box(x,0.52,z,0.5,0.3,0.5,DK,{ry});
+  }
+  wingChair(-39.2,24.2,-1.2);wingChair(-39.2,35.8,1.2+Math.PI);
+  wingChair(-72.6,25.6,1.0);wingChair(-72.6,34.4,-1.0+Math.PI);
+  for(const cx of[-61,-51]){                                          // glass display cases
+    B.box(cx,0.85,30,1.5,0.9,0.8,DK);
+    B.box(cx,1.34,30,1.56,0.08,0.86,0x8a6a4a);
+    B.box(cx,1.2,30,1.3,0.2,0.62,0xd8cbb0,{ch:'glowAlways'});}
+  // arched daylight window on the west wall
+  {const ax=-75.85,ry=Math.PI/2;
+   B.box(ax,4.4,30,0.3,4.4,4.2,0xc6b89a,{ry:0});
+   B.box(ax+0.06,4.2,30,0.36,3.6,3.4,0xfff2dc,{ch:'glowAlways'});
+   for(const[w2,y2]of[[3.0,6.25],[2.3,6.6],[1.3,6.9]])
+     B.box(ax+0.06,y2,30,0.36,0.36,w2,0xfff2dc,{ch:'glowAlways'});
+   B.box(ax,7.3,30,0.3,0.5,2.0,0xc6b89a);}
+}
+const tmpW=new THREE.Color(0xffffff);
+const CLOUDS=[];
+for(let k=0;k<9;k++){
+  const m=new THREE.SpriteMaterial({map:puffTex,transparent:true,opacity:0,depthWrite:false,fog:false});
+  const s=new THREE.Sprite(m);
+  s.position.set(rnd(-380,280),rnd(140,220),rnd(-260,210));
+  s.scale.set(rnd(90,170),rnd(24,44),1);scene.add(s);
+  CLOUDS.push({s,v:rnd(0.8,2.0)});
+}
+const moonTex=(()=>{const cv=document.createElement('canvas');cv.width=cv.height=128;
+  const x=cv.getContext('2d'),g3=x.createRadialGradient(64,64,10,64,64,62);
+  g3.addColorStop(0,'rgba(235,240,255,1)');g3.addColorStop(0.55,'rgba(225,232,255,.95)');
+  g3.addColorStop(0.62,'rgba(200,214,248,.28)');g3.addColorStop(1,'rgba(200,214,248,0)');
+  x.fillStyle=g3;x.fillRect(0,0,128,128);return new THREE.CanvasTexture(cv);})();
+const moonSpr=new THREE.Sprite(new THREE.SpriteMaterial({map:moonTex,transparent:true,opacity:0,fog:false,depthWrite:false}));
+moonSpr.scale.setScalar(52);scene.add(moonSpr);
+const glitter=new THREE.Mesh(new THREE.PlaneGeometry(220,26),
+  new THREE.MeshBasicMaterial({color:0xffb46a,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+glitter.rotation.x=-Math.PI/2;glitter.position.set(-320,-24.3,-15);scene.add(glitter);
+
+/* ============================== MATERIALS / FLUSH ============================== */
+const matMain=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.93,metalness:0.02,side:THREE.DoubleSide});
+const matGlowN=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});
+const matGlowA=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});
+B.flush({main:matMain,glowNight:matGlowN,glowAlways:matGlowA});
+
+/* ============================== POINT LIGHTS ============================== */
+function plight(x,y,z,color,int,dist,opt={}){const L=new THREE.PointLight(color,int,dist,1.8);
+  L.position.set(x,y,z);scene.add(L);
+  return Object.assign({L,base:int,mode:'always',fl:0.06,ph:rnd(9),drop:false},opt);}
+const PL=[
+  plight(-64,6.5,30,0xffd9a0,28,27),  plight(-46,6.5,30,0xffd9a0,28,27),        // reading room
+  plight(36,4.5,62,0xffb46a,22,27,{fl:0.12}), plight(36,4,76.5,0xffc06a,16,16,{fl:0.16}), // chapel
+  plight(20,2.2,-89.5,0xff8a3a,26,21,{fl:0.3}), plight(8,5.5,-84,0xffc98a,18,29),          // risley
+  plight(-52,33.5,-6,0xffd9a0,12,18,{mode:'night'}),                                       // belfry
+  plight(34,-4.2,22,0xffc98a,10,14,{fl:0.5,drop:true}),                                    // tunnels…
+  plight(10,-4.2,30,0xffc98a,10,14,{fl:0.5,drop:true}),
+  plight(-4,-4.2,-20,0xff9a4a,14,16,{fl:0.4,drop:true}),
+  plight(-4,-4.2,-46,0xffc98a,10,14,{fl:0.55,drop:true}),
+  plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'}), plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'})];
+
+/* ============================== SHAFTS / BIRDS / LEAVES ============================== */
+const SHAFTS=[];
+function shaft(x0,y0,z0,x1,y1,z1,w,axis,color,kind){
+  const h=w/2,p=axis==='z'
+    ?[x0,y0,z0-h, x0,y0,z0+h, x1,y1,z1+h, x1,y1,z1-h]
+    :[x0-h,y0,z0, x0+h,y0,z0, x1+h,y1,z1, x1-h,y1,z1];
+  const g=new THREE.BufferGeometry();
+  g.setAttribute('position',new THREE.Float32BufferAttribute(p,3));
+  g.setIndex([0,1,2,0,2,3]);g.computeVertexNormals();
+  const m=new THREE.Mesh(g,new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,
+    side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
+  scene.add(m);SHAFTS.push({m,kind});
+}
+for(let z=48.5;z<=76;z+=6.5){                       // chapel: sun through the side glass
+  shaft(28.9,7.6,z,34.6,0.3,z,2.0,'z',0xf0b06a,'W');
+  shaft(43.1,7.6,z,37.4,0.3,z,2.0,'z',0xf0b06a,'E');}
+shaft(36,8,79.2,36,0.3,72.5,6,'x',0xffd9a0,'S');    // the great window
+shaft(-60,9.1,30,-58.8,0.4,30,2.6,'z',0xfff0d0,'RR');
+shaft(-50,9.1,30,-51.2,0.4,30,2.6,'z',0xfff0d0,'RR');
+const BIRDS=[];
+{const g=new THREE.BufferGeometry();
+ g.setAttribute('position',new THREE.Float32BufferAttribute(
+   [-0.5,0,0.16, 0,0.03,-0.12, 0,0,0.08,  0.5,0,0.16, 0,0.03,-0.12, 0,0,0.08],3));
+ g.computeVertexNormals();
+ const bm=new THREE.MeshBasicMaterial({color:0x14161c,side:THREE.DoubleSide});
+ const flocks=[{cx:-25,cz:-25,r:26,y:46,sp:0.09,n:5},{cx:38,cz:58,r:20,y:37,sp:-0.11,n:4},
+               {cx:-115,cz:15,r:32,y:26,sp:0.07,n:4}];
+ for(const fl of flocks)for(let k=0;k<fl.n;k++){
+   const m=new THREE.Mesh(g,bm);m.scale.setScalar(rnd(1.3,1.9));scene.add(m);
+   BIRDS.push({m,fl,off:k*0.42+rnd(0.2),ro:rnd(-3,3),yo:rnd(-1.5,1.5)});}}
+const FLEAVES=[];
+{const cols=[0xc0511f,0xd07a22,0xdca02c,0xa8391a];
+ const spots=TREES.filter(([x,z])=>Math.abs(x)<62&&Math.abs(z)<46);
+ for(let k=0;k<26&&spots.length;k++){
+   const[tx,tz]=spots[(Math.random()*spots.length)|0];
+   const m=new THREE.Mesh(new THREE.PlaneGeometry(0.22,0.16),
+     new THREE.MeshBasicMaterial({color:cols[k%4],side:THREE.DoubleSide}));
+   scene.add(m);
+   FLEAVES.push({m,x:tx+rnd(-1.6,1.6),z:tz+rnd(-1.6,1.6),y0:rnd(3.2,5.6),sp:rnd(0.05,0.11),ph:rnd(1)});}}
+
+/* ============================== AREAS / HUD ============================== */
+const AREAS=[
+  {name:'The Steam Tunnels',sub:'somewhere beneath the quad',
+   test:p=>p.y<-2.5&&p.x>-16&&p.x<37&&p.z>-70&&p.z<33},
+  {name:'McGraw Tower',sub:()=>P.pos.y>28?'the chimes — you climbed all 161':'161 steps to the top',
+   test:p=>p.x>-58&&p.x<-46&&p.z>-12&&p.z<0},
+  {name:'A.D. White Reading Room',sub:'Uris Library',test:p=>p.x>-78&&p.x<-34&&p.z>17&&p.z<43},
+  {name:'Sage Chapel',sub:'est. 1875',test:p=>p.x>27&&p.x<45&&p.z>43&&p.z<81},
+  {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
+  {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
+  {name:'Libe Slope',sub:'far above Cayuga’s waters',test:p=>p.x<-72},
+  {name:'The Arts Quad',sub:'Ezra and A.D. keep watch',test:p=>p.x>-68&&p.x<68&&p.z>-50&&p.z<50},
+  {name:'Central Campus',sub:'Ithaca, New York',test:()=>true}];
+let curArea='',labelTimer=0,chimed=false;
+const elMain=document.getElementById('areaMain'),elSub=document.getElementById('areaSub'),
+      elLabel=document.getElementById('areaLabel'),elClock=document.getElementById('clock');
+function updateArea(){
+  const A=AREAS.find(a=>a.test(P.pos));
+  if(A.name!==curArea){curArea=A.name;chimed=false;
+    elMain.textContent=A.name;elSub.textContent=typeof A.sub==='function'?A.sub():A.sub;
+    elLabel.style.opacity=1;clearTimeout(labelTimer);
+    labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);}
+  if(curArea==='McGraw Tower'&&P.pos.y>28&&!chimed){chimed=true;
+    elSub.textContent=AREAS[1].sub();elLabel.style.opacity=1;
+    clearTimeout(labelTimer);labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);playChimes();}
+}
+/* ============================== AUDIO — the chimes ============================== */
+let AC=null;function initAudio(){try{AC=new(window.AudioContext||window.webkitAudioContext)();}catch(e){}}
+function bellNote(f,t0,dur=2.4,vol=0.1){if(!AC)return;
+  for(const[m,v]of[[1,1],[2.76,0.4],[5.4,0.13]]){
+    const o=AC.createOscillator(),g=AC.createGain();o.type='sine';o.frequency.value=f*m;
+    g.gain.setValueAtTime(0.0001,t0);g.gain.exponentialRampToValueAtTime(vol*v,t0+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t0+dur);
+    o.connect(g);g.connect(AC.destination);o.start(t0);o.stop(t0+dur+0.1);}}
+function playChimes(){if(!AC)return;const t=AC.currentTime+0.15;
+  [[659.3,0],[523.3,.75],[587.3,1.5],[392,2.25],[392,3.6],[587.3,4.35],[659.3,5.1],[523.3,5.85]]
+  .forEach(([f,d])=>bellNote(f,t+d));}
+
+/* ============================== DAY-NIGHT + MAIN LOOP ============================== */
+let dayT=0.452,T=0,fpsNow=0,frames=0,fAcc=0,lampTimer=0;
+const sunDirV=new THREE.Vector3(),tmpC=new THREE.Color();
+const asCol=v=>v.isColor?v:tmpC.set(v);
+const clockT=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  step();
+}
+setInterval(()=>{if(document.hidden)step()},120);   // keep simulating when the tab is hidden
+window.__step=()=>step();
+function step(){
+  const dt=Math.min(clockT.getDelta(),0.05);T+=dt;
+  frames++;fAcc+=dt;if(fAcc>0.5){fpsNow=Math.round(frames/fAcc);frames=0;fAcc=0;}
+  stepPlayer(dt);
+  if(autopilot&&autopilot.done){const r=autopilot.res;autopilot=null;
+    if(r)r({pos:[+P.pos.x.toFixed(1),+P.pos.y.toFixed(1),+P.pos.z.toFixed(1)],area:curArea});}
+  // --- celestial state ---
+  const night=Math.sin(dayT*Math.PI*2)<-0.05;
+  if(started)dayT=(dayT+dt/(night?190:340))%1;
+  const ang=dayT*Math.PI*2,el=Math.sin(ang);
+  sunDirV.set(Math.cos(ang),el,0.32).normalize();
+  const PAL=pal(el),glowF=1-smooth(-0.12,0.06,el),dayF=smooth(-0.05,0.25,el);
+  const ug=1-smooth(-2.5,-0.5,P.pos.y);                       // underground factor
+  skyU.top.value.copy(asCol(PAL.top));skyU.hor.value.copy(asCol(PAL.hor));
+  skyU.sunCol.value.copy(asCol(PAL.sun));skyU.sunDir.value.copy(sunDirV);
+  skyU.sunAmt.value=clamp(el*5+0.75,0,1.2);
+  scene.fog.color.copy(asCol(PAL.fog)).multiplyScalar(1-ug*0.93);
+  scene.fog.density=lerp(PAL.fd,0.030,ug);
+  renderer.toneMappingExposure=PAL.ex;
+  stars.material.opacity=PAL.st*(1-ug);
+  sun.color.copy(asCol(PAL.sun));sun.intensity=PAL.si*(1-ug);
+  sun.position.copy(P.pos).addScaledVector(sunDirV,240);sun.target.position.copy(P.pos);
+  moon.intensity=0.22*glowF*(1-ug);
+  moon.position.copy(P.pos).addScaledVector(sunDirV,-240);moon.position.y=Math.abs(moon.position.y);
+  moon.target.position.copy(P.pos);
+  hemi.intensity=PAL.hi*(1-ug*0.88)+ug*0.3;
+  matGlowN.color.setScalar(0.07+1.5*glowF);
+  matGlowA.color.setScalar(1.12+0.08*Math.sin(T*9.7)+0.05*Math.sin(T*23.3));
+  for(const m of stainedMats)m.color.setScalar(0.35+0.8*dayF);
+  water.material.color.copy(asCol(PAL.hor)).multiplyScalar(0.34).lerp(C(0x16202e),1-dayF*0.85);
+  const gold=smooth(-0.05,0.08,el)*(1-smooth(0.16,0.32,el));
+  water.material.emissive.copy(asCol(PAL.sun)).multiplyScalar(0.3*gold);
+  // --- point lights: flicker, dropouts, roaming lamp pair ---
+  for(const p of PL){
+    if(p.mode==='lamp')continue;
+    const n=Math.sin(T*11+p.ph)*0.5+Math.sin(T*23.7+p.ph*1.7)*0.5;
+    let i=p.base*(1+p.fl*n);
+    if(p.mode==='night')i*=glowF;
+    if(p.drop&&Math.sin(T*0.9+p.ph*3)>0.985)i*=0.12;
+    p.L.intensity=i;}
+  lampTimer-=dt;
+  if(lampTimer<=0){lampTimer=0.5;
+    const near=LAMPS.map(l=>({l,d:(l.x-P.pos.x)**2+(l.z-P.pos.z)**2})).sort((a,b)=>a.d-b.d);
+    for(let k=0;k<2;k++){const pl=PL[PL.length-2+k],lm=near[k]?.l;
+      if(lm){pl.L.position.set(lm.x,lm.y+4.1,lm.z);pl.base=12;}}}
+  for(let k=0;k<2;k++){const pl=PL[PL.length-2+k];
+    pl.L.intensity=pl.base*glowF*(1+0.1*Math.sin(T*13+k*4));}
+  // --- fog banks & steam ---
+  const fogAmt=Math.max(clamp(1.15-Math.abs(el+0.02)*4,0.12,1),el<-0.1?0.5:0)*(1-ug);
+  for(const f of FOGS){
+    f.s.position.x+=f.vx*dt;f.s.position.z+=f.vz*dt;
+    if(f.s.position.x>f.x1)f.s.position.x=f.x0;if(f.s.position.z>f.z1)f.s.position.z=f.z0;
+    f.s.material.opacity=f.o*fogAmt*(0.7+0.3*Math.sin(T*0.3+f.ph));}
+  for(const st of STEAM){
+    const t=(T*st.spd+st.ph)%1;
+    st.s.position.set(st.vx+st.dx*t*3,st.vy+t*2.0,st.vz+st.dz*t*3);
+    st.s.scale.setScalar(0.25+t*1.6);st.s.material.opacity=0.3*(1-t)*(0.4+0.6*ug);}
+  // --- clock hands, bells, HUD ---
+  const hours=(dayT*24+7)%24;
+  for(const h of clockHands){h.hr.rotation.z=-(hours%12)/12*Math.PI*2;h.mn.rotation.z=-(hours%1)*Math.PI*2;}
+  for(const b of bellGroup.children)if(b.userData.ph!==undefined)b.rotation.x=Math.sin(T*1.05+b.userData.ph)*0.1;
+  elClock.textContent=String(Math.floor(hours)).padStart(2,'0')+':'+String(Math.floor(hours%1*60)).padStart(2,'0')+(glowF>0.5?' ☾':' ☀');
+  updateArea();
+  // clouds, moon, lake glitter
+  for(const c of CLOUDS){c.s.position.x+=c.v*dt;if(c.s.position.x>280)c.s.position.x=-380;
+    c.s.material.color.copy(asCol(PAL.hor)).lerp(tmpW,0.55);
+    c.s.material.opacity=(dayF*0.32+0.04)*(1-ug);}
+  moonSpr.position.copy(camera.position).addScaledVector(sunDirV,-600);
+  moonSpr.material.opacity=glowF*0.85*(1-ug);
+  // light shafts follow the sun; birds circle; leaves spiral down
+  const wA=clamp(-sunDirV.x,0,1)*dayF,eA=clamp(sunDirV.x,0,1)*dayF;
+  for(const s of SHAFTS)s.m.material.opacity=
+    (s.kind==='W'?0.085*wA:s.kind==='E'?0.085*eA:s.kind==='S'?0.055*dayF:0.045+0.055*dayF);
+  for(const b of BIRDS){const a=T*b.fl.sp+b.off;
+    b.m.position.set(b.fl.cx+Math.cos(a)*(b.fl.r+b.ro),b.fl.y+b.yo+Math.sin(T*1.3+b.off*7)*1.6,
+      b.fl.cz+Math.sin(a)*(b.fl.r+b.ro));
+    b.m.rotation.y=-a+(b.fl.sp>0?0:Math.PI);
+    b.m.rotation.z=Math.sin(T*9+b.off*11)*0.55;}
+  for(const l of FLEAVES){const t=(T*l.sp+l.ph)%1;
+    l.m.position.set(l.x+Math.sin(T*1.7+l.ph*9)*0.9*t,l.y0*(1-t)+0.08,l.z+Math.cos(T*1.3+l.ph*7)*0.5*t);
+    l.m.rotation.set(T*2.2+l.ph,T*1.6,T*2.8+l.ph*3);}
+  glitter.material.opacity=gold*0.4*(1-ug);glitter.material.color.copy(asCol(PAL.sun));
+  if(FXMODE==='none')renderer.render(scene,camera);else composer.render();
+}
+/* ============================== DEBUG / VERIFY API ============================== */
+window.__demo={
+  begin(){started=true;overlay.classList.add('hidden');document.getElementById('fadein').style.opacity=0;},
+  pos:()=>[+P.pos.x.toFixed(1),+P.pos.y.toFixed(1),+P.pos.z.toFixed(1)],
+  area:()=>curArea,
+  walk:(wps,timeout=90)=>new Promise(res=>{autopilot={wps,i:0,done:false,t:0,timeout,res};}),
+  tp(x,y,z){P.pos.set(x,y,z);P.vel.set(0,0,0);},
+  look(yaw,pitch=0){P.yaw=yaw;P.pitch=pitch;},
+  time(t){dayT=t;}, fps:()=>fpsNow, routes:window.__routes, solids:()=>solids.length,
+  solidsAt(x,z,y=0,r=0.5){return solids.filter(s=>x>s.x0-r&&x<s.x1+r&&z>s.z0-r&&z<s.z1+r&&s.y1>y&&s.y0<y+1.8)
+    .map(s=>[s.x0,s.y0,s.z0,s.x1,s.y1,s.z1].map(v=>+v.toFixed(2)));}};
+animate();
+</script>
+</body>
+</html>
