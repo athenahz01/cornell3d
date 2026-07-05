@@ -376,7 +376,7 @@ const BRECTS=[
   [20,10,32,22],[-10,-74,2,-62],                                         // tunnel huts
   [-76,46,-46,74],[-42,72,-28,86],[-74,88,-38,120],[-36,90,-10,118],[-22,122,6,144], // Straight, Store, Myron, Anabel, Olin chem
   [6,124,24,140],[34,106,56,126],[34,124,58,156],[34,154,60,172],        // Carpenter, Phillips, Duffield, Upson
-  [58,148,76,170],[-2,154,36,170],[-2,170,20,186],[22,170,42,186],[60,104,82,128], // Grumman/Rhodes, KTB, Hollister, Snee, Gates
+  [58,148,76,170],[-2,154,36,170],[-2,170,20,186],[22,170,42,186],[60,92,82,118], // Grumman/Rhodes, KTB, Hollister, Snee, Gates
   [54,26,74,44],[54,44,78,72],[84,28,118,64],[56,6,70,24],               // Day, Statler, Barton, Uris Hall
   [84,-16,102,2],[50,-56,64,-40],[68,-56,80,-42],[84,-42,104,-22],       // Rockefeller, ADWhite House, Barn, Bailey
   [-74,-46,-60,-30],[-74,-24,-60,-8],[-74,-6,-60,10],                    // Old Stone Row
@@ -464,7 +464,8 @@ const LAMPS=[];
   [-30,33.5],[-44,-14],[26,38],[32.8,41.5],[10,-58],[-4,-72],[4,-72],[22,10],
   [-82,6],[-104,20],[-126,26],[-148,16],[-168,2],[-96,-14],[64,-44],[64,44],[-66,-44],
   [-36.8,50],[-29.6,50],[-34.4,62],[-27.2,62],[-32,74],[-24.8,74],[-29.8,86],[-22.6,86],  // Ho Plaza pairs
-  [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76]];                      // Campus Road + the law court
+  [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76],                        // Campus Road + the law court
+  [28.5,127],[12,145],[30,152],[24,166],[48,143],[62,118.5]];                               // Engineering Quad
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
@@ -1330,12 +1331,133 @@ function quoins(x,z,h,color){for(let y=0.7;y<h;y+=1.3)B.box(x,y,z,0.9,0.6,0.9,co
   for(let k=0;k<5;k++)g2.fillRect(gx(-30+k*1.6),gz(118.7),gs(0.9),gz(123.3)-gz(118.7));  // crosswalk
   path([[-37,90],[-37,104],[-35,112]],2.4);                           // court walk to Anabel
   path([[-51,100.5],[-51,107.5]],2,'#9b917d');path([[-45,104],[-57,104]],2,'#9b917d');   // Purcell cross
-  path([[-26,88],[-26,118],[-10,121]],3.4,'#a79c86');                 // plaza down to Campus Road
+  path([[-37,112],[-37,118],[-24,121]],3.4,'#a79c86');                // court down to Campus Road
   g2.fillStyle='#9b917d';
   for(const[px,pz,r]of[[-46,60,3],[-46,89,2.6],[-50,101.5,2.4],[-35,112,2.4],[-31,79,2.6]])
     {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
   groundTex.needsUpdate=true;
 }
+/* ============================== PHASE B: THE ENGINEERING QUAD ============================== */
+{ // the green + the Pew sundial
+  B.cyl(22,0.55,147,1.05,1.25,1.1,10,0x6e532c,{solid:true});         // bronze drum
+  B.box(22,1.2,147,1.7,0.14,1.7,0x7a5c30);
+  B.wedge(22,1.28,147,1.5,0.85,0.5,0x8a6b34,{ry:0.35});              // gnomon plate
+  B.box(23.2,0.5,148.4,0.7,0.5,0.5,0x8d8a80);B.box(23.2,0.82,148.4,0.6,0.14,0.44,0x6e532c); // plaque
+  bench(14,144,0);bench(30,151,Math.PI);
+  person(17,149,'stand',0.8);person(28,144,'sit',2.4);
+}
+{ // Carpenter Hall: stone pier loggia, glass between piers
+  const X0=6,X1=24,Z0=126,Z1=140,MX=15,H=11,ST=0x8d8a82,LIME=0xcfc4a8;
+  B.box(MX,H/2+2.6,133,X1-X0,H-2.6,Z1-Z0,ST,{solid:true});           // upper mass
+  B.box(MX,1.5,133,X1-X0-2,3,Z1-Z0-2,0x2c343c,{solid:true});         // recessed glass ground floor
+  for(let px=X0+1;px<=X1-1;px+=3)for(const pz of[Z0+0.6,Z1-0.6])
+    B.box(px,1.5,pz,1.0,3,1.2,ST,{solid:true});                      // loggia piers
+  B.box(MX,2.2,Z1+0.15,X1-X0-3,1.5,0.2,0xd8bf92,{ch:'glowNight'});   // lit glass line, south
+  B.box(MX,4.35,133,X1-X0+0.3,0.5,Z1-Z0+0.3,LIME);                   // limestone band
+  B.box(MX,H+0.15,133,X1-X0+0.4,0.3,Z1-Z0+0.4,LIME);
+  B.box(MX,9.4,Z1+0.08,10,0.9,0.16,0x1c1f24);                        // CORNELL ENGINEERING strip
+  paneRow(MX,7.2,Z1+0.1,0,5,3.2,1.9,2.4);
+}
+{ // Phillips Hall: limestone panels, regular grid
+  const MX=45,MZ=116,H=12;
+  B.box(MX,H/2,MZ,22,H,20,0xcfc8b4,{solid:true});
+  B.box(MX,H+0.15,MZ,22.4,0.3,20.4,0xb9b2a0);
+  for(let fy=2.4;fy<H-1;fy+=2.9){paneRow(MX,fy,105.9,0,6,3.3,1.8,1.5);paneRow(34-0.1,fy,MZ,Math.PI/2,5,3.4,1.8,1.5);}
+}
+{ // Duffield Hall + the glass atrium along the quad face
+  const X0=34,X1=58,Z0=124,Z1=156,H=13,STE=0x9098a0;
+  B.box(51,H/2,140,14,H,Z1-Z0,0xb2b8be,{solid:true});                // lab mass, east
+  B.box(46,H+0.1,140,24.4,0.3,Z1-Z0+0.4,0x878d94);
+  paneRow(58.1,4,140,Math.PI/2,7,4.2,1.9,2.2);paneRow(58.1,8.5,140,Math.PI/2,7,4.2,1.9,2.2);
+  // atrium shell: glass west wall with steel mullions, walk-in
+  wallD(40,0,Z0+0.5,10,H,1,0,0x3a4148);wallD(40,0,Z1-0.5,10,H,1,0,0x3a4148);
+  wallD(X0+0.5,0,140,Z1-Z0,H,1,Math.PI/2,0xbcd6de,{off:0,w:2.6,h:3.4});  // the glass face
+  B.box(X0-0.12,H-1.1,140,0.3,2.2,Z1-Z0,0x3a4148);                   // header band, proud
+  for(let mz=Z0+2;mz<=Z1-2;mz+=2.3)if(Math.abs(mz-140)>1.6)
+    B.box(X0-0.15,5.4,mz,0.24,10.8,0.3,STE);                          // mullions
+  for(const gy of[2.2,5.2])B.box(X0-0.18,gy,140,0.14,0.9,Z1-Z0-3,0xcfe6ee,{ch:'glowNight'});
+  B.box(40,0.12,140,11,0.24,Z1-Z0-1.6,0x8d939a,{solid:true});        // atrium floor
+  B.box(40,H-0.6,140,12,0.4,Z1-Z0-1,0x6a7078);                       // roof slab
+  B.box(40,4.5,140,9.6,0.3,3,0x878d94,{solid:true});                 // mezzanine bridge
+  B.box(40,5.25,138.6,9.6,0.8,0.1,0xb2b8be);B.box(40,5.25,141.4,9.6,0.8,0.1,0xb2b8be);
+  // Mattin's counter + menu glow
+  B.box(40,1.0,151.5,6,1.6,1.4,0x4a3a30,{solid:true});
+  B.box(40,1.86,151.5,6.2,0.12,1.5,0xd8cfc0);
+  B.box(40,4.0,153.4,4.2,1.2,0.16,0x1c1f24);
+  B.box(40,4.0,153.3,3.8,0.9,0.1,0xffd9a0,{ch:'glowAlways'});        // menu board
+  // study tables, laptop glow, the Reuleaux cases
+  for(const[tx,tz]of[[38,130],[42.5,133],[38,136],[42.5,144],[38,147],[42.6,127]]){
+    B.cyl(tx,0.98,tz,0.75,0.08,0.1,8,0xd8cfc0);B.cyl(tx,0.55,tz,0.07,0.1,0.9,6,0x555a60);
+    B.box(tx+0.2,1.13,tz,0.42,0.05,0.3,0x33383f);
+    B.box(tx+0.2,1.28,tz+0.14,0.42,0.28,0.03,0xcfe0ff,{ch:'glowAlways'});  // laptop screen
+    for(const a of[0,2.1,4.2])B.box(tx+Math.cos(a)*1.05,0.5,tz+Math.sin(a)*1.05,0.45,0.06,0.45,0x555a60,{solid:true});}
+  for(let k=0;k<4;k++){const cz=128+k*6.4;                            // kinematic model cases
+    B.box(44.6,0.8,cz,0.9,1.1,0.9,0x2c3036,{solid:true});
+    B.box(44.6,1.42,cz,0.96,0.07,0.96,0xd8cfc0);
+    B.box(44.6,1.6,cz,0.7,0.28,0.7,0xd8cbb0,{ch:'glowAlways'});
+    B.cyl(44.45,1.62,cz-0.1,0.08,0.08,0.3,6,0xb08a3a);B.box(44.75,1.6,cz+0.12,0.3,0.08,0.08,0xb08a3a);}
+  person(38.2,130.9,'sit',2.2);person(42.3,133.8,'sit',-0.6);person(37.8,146.2,'sit',1.4);
+}
+{ // Upson Hall: blind loggia, terracotta and aluminum banding
+  const MX=47,MZ=163,H=12;
+  B.box(MX,H/2+2.4,MZ,26,H-2.4,18,0xb9bec4,{solid:true});
+  for(let px=35;px<=59;px+=3.4)B.box(px,1.4,155.2,1.4,2.8,1.0,0x8d8a82,{solid:true});   // gray piers
+  B.box(MX,1.4,MZ,24,2.8,15,0x2c343c,{solid:true});                  // glass infill mass
+  for(let sy=5;sy<H+1.6;sy+=1.5)B.box(MX,sy,154.9,20,0.55,0.14,sy%3<1.5?0xc9a83a:0xb9bec4); // banding
+  B.box(MX,H+0.35,MZ,26.4,0.4,18.4,0x878d94);
+}
+{ // Grumman + Rhodes
+  B.box(66,4,153,16,8,10,0xb2b8be,{solid:true});B.box(66,8.2,153,16.4,0.3,10.4,0x878d94);
+  B.box(68,7,165,16,14,10,0x9c5a48,{solid:true});B.box(68,14.2,165,16.4,0.4,10.4,0x7a4438);
+  paneRow(68,5,159.9,0,4,3.6,1.7,2.2);paneRow(68,10,159.9,0,4,3.6,1.7,2.2);
+}
+{ // Kimball-Thurston-Bard: the long concrete slab
+  const MX=15.5,MZ=162,H=10;
+  B.box(MX,H/2,MZ,35,H,14,0x8a5a42,{solid:true});
+  for(let fx=-1;fx<=32;fx+=2.6)B.box(fx,H/2,154.8,0.7,H,0.7,0xb9b2a0);      // concrete fins
+  B.box(MX,H+0.15,MZ,35.4,0.3,14.4,0xb9b2a0);
+  for(const ex of[4,15.5,27]){B.box(ex,1.6,154.7,2.2,3.2,0.7,0xb9b2a0,{solid:true});
+    B.box(ex,3.6,154.6,1.8,0.5,0.2,0x1c1f24);}                       // entrance bays + names
+}
+{ // Hollister + Snee, perched over Cascadilla
+  B.box(9,5,178,22,10,16,0x9c9483,{solid:true});B.box(9,10.2,178,22.4,0.3,16.4,0x8a8274);
+  paneRow(9,3,170.1,0,5,3.8,1.8,1.8);paneRow(9,6.5,170.1,0,5,3.8,1.8,1.8);
+  B.box(32,5,178,20,10,16,0x8a5a42,{solid:true});B.box(32,10.2,178,20.4,0.3,16.4,0xb9b2a0);
+  paneRow(32,4.5,170.1,0,4,4.0,1.9,2.4);
+  for(let k=0;k<6;k++)B.sph(45+rnd(0,5),0.4,175+rnd(0,8),rnd(0.7,1.5),[0x6e6a60,0x7a756a,0x5c584e][k%3],{sy:0.55});
+  B.box(46,0.55,180.5,0.6,0.5,0.5,0x8d8a80);B.box(46,0.9,180.5,0.55,0.14,0.4,0x6e532c);   // rock park plaque
+}
+{ // Gates Hall: angular metal skin, the cantilevered corner (north of Campus Road)
+  const X0=60,X1=82,Z0=94,Z1=116,H=13,MZ=105;
+  B.box(71,H/2+1.5,MZ+1,X1-X0,H-3,20,0xb9bec4,{solid:true});         // upper skin over recessed base
+  for(let sy=4;sy<H;sy+=1.7)B.box(71,sy,Z0+0.95,20,0.7,0.18,0xa6abb2);  // perforation strips
+  for(let sy=4;sy<H;sy+=1.7)B.box(82.05,sy,MZ+1,0.18,0.7,18,0xa6abb2);
+  B.box(66,10.5,91.6,14,5,7,0xb9bec4,{solid:true});                  // the cantilever, hanging north
+  B.box(66,7.8,91.6,13.4,0.4,6.4,0x878d94);
+  B.box(66,10.5,88.2,13.6,4.6,0.3,0xa6abb2);
+  B.box(74,6.5,103,14,10,0.4,0xb9bec4,{ry:0.10});                    // angled facade plane, east
+  wallD(71,0,Z0+0.5,X1-X0,3.4,1,0,0x2c343c,{off:0,w:2.6,h:3.0});     // glass lobby, north face
+  B.box(71,1.6,Z0+0.6,16,2.6,0.2,0xcfe6ee,{ch:'glowNight'});         // lobby glow
+  B.box(71,0.1,MZ+1,X1-X0-2,0.2,20,0x8d939a,{solid:true});           // lobby floor
+  B.box(71,3.55,MZ+1,X1-X0-2,0.5,20,0x878d94);                       // lobby ceiling
+  wallD(71,0,Z1-0.5,X1-X0,3.4,1,0,0xb9bec4);
+  wallD(60.5,0,MZ,20,3.4,1,Math.PI/2,0xb9bec4);wallD(81.5,0,MZ,20,3.4,1,Math.PI/2,0xb9bec4);
+  B.box(66,1.4,100,3.4,0.8,1.2,0xd8cfc0,{solid:true});person(66.8,101.2,'sit',0.4);   // lobby bench
+  bench(76,90.5,Math.PI);
+}
+{ // Phase B paving + wiring
+  path([[26,121],[26,143]],3);path([[8,147],[32,147]],2.6);path([[22,143],[22,168]],2.6);
+  path([[30,121],[30,103],[57,103],[58,112],[58,121],[90,121]],3.4,'#8a8274');   // road jogs north of Phillips
+  path([[57,103],[64,96],[71,92.5]],2.6);
+  path([[33,140],[36,140]],2.6);path([[26,166],[9,170]],2.2);path([[26,166],[31,170]],2.2);
+  g2.fillStyle='#9b917d';
+  for(const[px,pz,r]of[[34.5,140,2.6],[22,147,4.2],[71,92.5,2.6]])
+    {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
+  groundTex.needsUpdate=true;
+}
+window.__routes.engQuad=[[-26,86],[-37,91],[-37,118],[-24,121],[10,121],[26,123],[26,143],[24,147]];
+window.__routes.duffield=[[24,147],[26,143],[32,140],[36.5,140],[40,140],[40,133],[38.5,130.5]];
+window.__routes.gates=[[26,123],[30,121],[30,103],[57,103],[57,95],[58.5,91.5],[66,91],[71,92.2],[71,97],[70,103]];
 window.__routes.hoPlaza=[[0,40],[-14,44],[-26,58],[-27,72],[-26,86]];
 window.__routes.straight=[[-26,60],[-40,60],[-46,60],[-52,60],[-58,60]];
 window.__routes.gould=[[-26,86],[-38,87.5],[-46,88.4],[-46,91.8],[-50,92.6],[-58,92.6]];
@@ -1390,6 +1512,7 @@ const PL=[
   plight(-58,6.5,62,0xffd9a0,26,27),                                // Memorial Room wash
   plight(-60,6.8,95,0xffe0b8,22,20), plight(-50,6.8,95,0xffe0b8,22,20), // Gould pools
   plight(-23,4.2,110,0xffc98a,12,14),                               // Anabel chapel
+  plight(40,5,132,0xffd9a0,30,22), plight(40,5,148,0xffd9a0,30,22), // Duffield atrium, open all night
   plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'}), plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'})];
 
 /* ============================== SHAFTS / BIRDS / LEAVES ============================== */
@@ -1447,11 +1570,15 @@ const AREAS=[
   {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
   {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
   {name:'Libe Slope',sub:'far above Cayuga’s waters',test:p=>p.x<-72},
+  {name:'Duffield Atrium',sub:'open all night',test:p=>p.x>33&&p.x<46&&p.z>123&&p.z<157},
+  {name:'Gates Hall',sub:'computer and information science',test:p=>p.x>59&&p.x<83&&p.z>87&&p.z<119},
   {name:'The Gould Reading Room',sub:'Cornell Law Library',test:p=>p.x>-71&&p.x<-41&&p.z>89&&p.z<101},
   {name:'Willard Straight Hall',sub:'the Straight',test:p=>p.x>-75&&p.x<-47&&p.z>47&&p.z<73},
   {name:'Anabel Taylor Hall',sub:'one quiet room for everyone',test:p=>p.x>-35&&p.x<-11&&p.z>91&&p.z<117},
   {name:'Myron Taylor Hall',sub:'the law quad',test:p=>p.x>-73&&p.x<-39&&p.z>89&&p.z<119},
   {name:'Ho Plaza',sub:'crossroads of the Hill',test:p=>p.x>-42&&p.x<-20&&p.z>44&&p.z<90},
+  {name:'The Engineering Quad',sub:'the sundial is accurate to thirty seconds',
+   test:p=>p.x>2&&p.x<62&&p.z>120&&p.z<174},
   {name:'The Arts Quad',sub:'Ezra and A.D. keep watch',test:p=>p.x>-68&&p.x<68&&p.z>-50&&p.z<50},
   {name:'Central Campus',sub:'Ithaca, New York',test:()=>true}];
 let curArea='',labelTimer=0,chimed=false;
