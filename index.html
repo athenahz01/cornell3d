@@ -116,7 +116,9 @@ const C=h=>new THREE.Color(h);
 function terrainH(x,z){
   let h=0;
   if(x<-74) h-=26*smooth(-74,-165,x);
-  if(z<-104) h-=24*smooth(-104,-126,z);
+  if(z<-104){const rim=smooth(-104,-126,z)-smooth(-128,-142,z)*smooth(-44,-20,x);
+    h-=24*rim;}                                     // gorge: north side climbs back out east of the lake mouth
+  if(x>22&&x<112&&z<-116&&z>-146) h=Math.min(h,-9); // the Beebe Lake basin
   if(x>120) h+=2*smooth(120,205,x);          // gentle rise east
   h+=Math.sin(x*0.11)*Math.cos(z*0.13)*0.22; // gentle undulation
   if(x>-70&&x<120&&z>-100&&z<186) h=Math.sin(x*0.11)*Math.cos(z*0.13)*0.1; // campus stays flat-ish
@@ -381,7 +383,8 @@ const BRECTS=[
   [84,-16,102,2],[50,-56,64,-40],[68,-56,80,-42],[84,-42,104,-22],       // Rockefeller, ADWhite House, Barn, Bailey
   [-74,-46,-60,-30],[-74,-24,-60,-8],[-74,-6,-60,10],                    // Old Stone Row
   [-28,-68,28,-50],[-46,-64,-32,-50],[30,-62,48,-46],[50,-22,76,4],      // Sibley, Tjaden, Lincoln, Goldwin
-  [40,14,54,28],[-30,46,-2,64]];                                          // Stimson, Olin Library
+  [40,14,54,28],[-28,44,-6,58],                                            // Stimson, Olin Library
+  [-22,60,-6,88],[27,46,45,78],[-76,-68,-58,-50],[148,42,172,68]];         // Sage Chapel, Sage Hall, Johnson, Ag stub
 const inBuilding=(x,z)=>{for(const[a,b,c,d]of BRECTS)if(x>a&&x<c&&z>b&&z<d)return true;return false;};
 for(let k=TREES.length-1;k>=0;k--){const[x,z]=TREES[k];
   if(inBuilding(x,z)||(Math.abs(x)<10&&Math.abs(z)<10))TREES.splice(k,1);}
@@ -746,87 +749,125 @@ function stained(x,y,z,w,h,ry,seed){
   mesh.position.set(x,y,z);mesh.rotation.y=ry;scene.add(mesh);
 }
 {
-  const X0=28,X1=44,Z0=44,Z1=80,MX=36,MZ=62,WH=10;
+  const X0=-22,X1=-6,Z0=60,Z1=88,MX=-14,MZ=74,WH=10;   // 147 Ho Plaza: east side of the plaza
   const BRICK=0x8a4636,TRIM=0xc6b89a,WOOD=0x4a3626,SLATE=0x5d6570;
-  wallD(MX,0,Z0+0.5,X1-X0,WH,1,0,BRICK,{off:0,w:2.4,h:3.4});      // north entry
+  wallD(MX,0,Z0+0.5,X1-X0,WH,1,0,BRICK);                           // north gable wall
   wallD(MX,0,Z1-0.5,X1-X0,WH,1,0,BRICK);                           // south (apse wall)
-  wallD(X0+0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK);
-  wallD(X1-0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK);
-  B.wedge(MX,WH,Z0+0.5,X1-X0,8.4,1,BRICK);B.wedge(MX,WH,Z1-0.5,X1-X0,8.4,1,BRICK); // steep gables
-  B.wedge(MX,WH+0.25,MZ,Z1-Z0+1.4,8.4,X1-X0+1.6,SLATE,{ry:Math.PI/2});  // steep slate roof, ridge along the nave
+  wallD(X1-0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK);                   // east
+  wallD(X0+0.5,0,MZ,Z1-Z0,WH,1,Math.PI/2,BRICK,{off:0,w:2.4,h:3.4});  // west entry onto Ho Plaza
+  B.wedge(MX,WH,Z0+0.5,X1-X0,8.4,1,BRICK);B.wedge(MX,WH,Z1-0.5,X1-X0,8.4,1,BRICK);
+  B.wedge(MX,WH+0.25,MZ,Z1-Z0+1.4,8.4,X1-X0+1.6,SLATE,{ry:Math.PI/2});
   B.box(MX,WH+0.15,MZ,X1-X0+1.2,0.5,Z1-Z0+1.2,TRIM);               // cornice
-  for(const by of[3.35,6.9])B.box(MX,by,MZ,X1-X0+0.14,0.35,Z1-Z0+0.14,TRIM);  // polychrome stone bands
-  // west transept: gabled mass carrying the great window toward the quad
-  B.box(26.3,4.5,MZ,3.8,9,12,BRICK,{solid:true});
-  B.box(26.3,3.35,MZ,3.94,0.35,12.14,TRIM);B.box(26.3,6.9,MZ,3.94,0.35,12.14,TRIM);
-  B.wedge(26.3,9,MZ,4.0,6.2,12.4,SLATE);
-  stained(24.35,5.4,MZ,4.4,6.2,Math.PI/2,53);                      // transept great window
-  B.box(24.3,9.1,MZ,0.4,1.2,1.6,TRIM);                             // window hood
-  for(const dz of[-10,0,10])for(const s of[-1,1]){                  // roof dormers
+  for(const by of[3.35,6.9])B.box(MX,by,MZ,X1-X0+0.14,0.35,Z1-Z0+0.14,TRIM);  // polychrome bands
+  // east transept toward East Avenue
+  B.box(-4.1,4.5,MZ,3.8,9,12,BRICK,{solid:true});
+  B.box(-4.1,3.35,MZ,3.94,0.35,12.14,TRIM);B.box(-4.1,6.9,MZ,3.94,0.35,12.14,TRIM);
+  B.wedge(-4.1,9,MZ,4.0,6.2,12.4,SLATE);
+  stained(-2.05,5.4,MZ,4.4,6.2,Math.PI/2,53);
+  B.box(-2.1,9.1,MZ,0.4,1.2,1.6,TRIM);
+  for(const dz of[-8,0,8])for(const s of[-1,1]){                    // roof dormers
     B.box(MX+s*5.1,13.6,MZ+dz,1.2,1.5,1.3,BRICK);
     B.wedge(MX+s*5.1,14.35,MZ+dz,1.4,1.0,1.5,SLATE,{ry:Math.PI/2});}
-  for(let z=50;z<=76;z+=6.5){B.box(X0-0.4,1.6,z,1.0,3.2,1.5,TRIM,{solid:true});
+  for(let z=64;z<=84;z+=6.5){B.box(X0-0.4,1.6,z,1.0,3.2,1.5,TRIM,{solid:true});
     B.box(X1+0.4,1.6,z,1.0,3.2,1.5,TRIM,{solid:true});
     B.box(X0-0.2,5.4,z,0.6,5,1.1,TRIM);B.box(X1+0.2,5.4,z,0.6,5,1.1,TRIM);}   // buttresses
-  for(const px of[-2.1,2.1])B.box(MX+px,1.7,Z0-0.9,0.7,3.4,1.0,TRIM,{solid:true});       // porch pillars
-  B.box(MX,3.9,Z0-1.0,5.6,0.9,1.7,BRICK);                                                 // porch arch head
-  B.box(MX,0.1,Z0-1.6,5,0.2,2.6,0x9b917d,{solid:true});
-  // stained glass, five bays per side, the great south window, west rose over entry
+  for(const pz of[-2.1,2.1])B.box(X0-0.9,1.7,MZ+pz,1.0,3.4,0.7,TRIM,{solid:true});  // west porch pillars
+  B.box(X0-1.0,3.9,MZ,1.7,0.9,5.6,BRICK);                           // porch arch head
+  B.box(X0-1.6,0.1,MZ,2.6,0.2,5,0x9b917d,{solid:true});
+  // the rose window over the west entry: twelve apostles
+  B.cyl(X0-0.06,7.6,MZ,1.7,1.7,1.3,14,TRIM,{rz:Math.PI/2});
+  for(let k=0;k<12;k++)B.box(X0-0.1,7.6,MZ,0.5,2.6,0.22,
+    [0xa83228,0x274a9c,0xd8a428,0x3f7a3c][k%4],{rx:k*Math.PI/12,ch:'glowNight'});
+  B.cyl(X0-0.16,7.6,MZ,0.55,0.55,1.4,10,0xffd9a0,{rz:Math.PI/2,ch:'glowAlways'});
+  // stained glass bays: four east, four west skipping the door
   let sd=3;
-  for(let z=48.5;z<=76;z+=6.5){stained(X0+0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);
-    stained(X1-0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);}
-  stained(MX,8.35,Z1-0.5,4.6,4.6,0,97);                            // chancel rose, high above the apse
-  stained(MX,6.8,Z0+0.5,4.6,4.2,0,131);                            // over entry
+  for(const z of[64,68.5,80,84.5]){stained(X1-0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);
+    stained(X0+0.5,5.6,z,2.2,5.4,Math.PI/2,sd+=7);}
+  stained(MX,8.35,Z1-0.5,4.6,4.6,0,97);                             // chancel rose above the apse
   // interior: floor, pews, aisle, chancel
   B.box(MX,0.06,MZ,X1-X0-1.6,0.12,Z1-Z0-1.6,0x5c5148,{solid:true});
-  B.box(MX,0.14,(Z0+MZ)/2+4,2.6,0.06,26,0x6e1f1c,{solid:true});    // crimson aisle
-  for(let z=50;z<=71;z+=2.3)for(const sx of[-4.1,4.1]){
-    B.box(MX+sx,0.62,z,4.6,0.09,0.55,WOOD,{solid:true});           // seat
-    B.box(MX+sx,0.5,z,4.6,0.5,0.12,0x3c2c1e);                      // front panel
-    B.box(MX+sx,1.05,z+0.35,4.6,0.85,0.1,WOOD);                    // back
-    for(const ex of[-2.25,2.25])B.box(MX+sx+ex,0.65,z+0.1,0.1,1.3,0.8,0x3c2c1e);}
-  B.box(MX,0.3,76.5,10,0.35,6,0x8d8071,{solid:true});              // chancel platform
-  B.box(MX,0.62,77.5,7,0.3,3.4,0x8d8071,{solid:true});
-  B.box(MX,1.35,78,2.6,1.15,1.1,0x7c221e,{solid:true});            // altar
-  // ---- the gilded apse (the soul of Sage) ----
-  {const AR=3.2,AZ=76.4,GOLD=0xc9a04a,GOLD2=0xd8b158;
+  B.box(MX,0.14,73,2.6,0.06,20,0x6e1f1c,{solid:true});              // crimson aisle
+  B.box(-18,0.145,74,7.4,0.05,2.2,0x6e1f1c,{solid:true});            // cross-aisle runner from the door
+  for(let z=66;z<=79;z+=2.2)for(const sx of[-3.6,3.6]){
+    if(sx<0&&z<68)continue;                                          // antechapel corner stays open
+    if(Math.abs(z-74)<2.3)continue;                                  // cross-aisle at the west door
+    B.box(MX+sx,0.62,z,3.4,0.09,0.55,WOOD,{solid:true});
+    B.box(MX+sx,0.5,z,3.4,0.5,0.12,0x3c2c1e);
+    B.box(MX+sx,1.05,z+0.35,3.4,0.85,0.1,WOOD);
+    for(const ex of[-1.6,1.6])B.box(MX+sx+ex,0.65,z+0.1,0.1,1.3,0.8,0x3c2c1e);}
+  B.box(MX,0.3,84.2,10,0.35,5.4,0x8d8071,{solid:true});              // chancel platform
+  B.box(MX,0.62,85.2,7,0.3,3,0x8d8071,{solid:true});
+  B.box(MX,1.35,85.8,2.6,1.15,1.1,0x7c221e,{solid:true});            // altar
+  // The Realm of Learning: blue heaven band with gilded stars over the nave
+  B.box(MX,9.3,MZ-1,8.2,0.2,Z1-Z0-6,0x1d2a52);
+  for(let k=0;k<36;k++)B.box(MX+rnd(-3.6,3.6),9.16,63+rnd(0,21),0.1,0.08,0.1,0xffd27a,{ch:'glowAlways'});
+  for(let k=0;k<6;k++){const szx=MX+rnd(-3,3),szz=64+k*3.6;
+    B.box(szx,9.14,szz,0.42,0.06,0.1,0xffd27a,{ch:'glowAlways'});
+    B.box(szx,9.14,szz,0.1,0.06,0.42,0xffd27a,{ch:'glowAlways'});}
+  // hammer-beam bracket pairs + brass chandeliers on chains
+  for(let z=64;z<=84;z+=5)for(const s of[-1,1]){
+    B.box(MX+s*6.6,7.6,z,1.6,0.4,0.4,0x3c2c1e,{rz:s*0.55});
+    B.box(MX+s*5.6,6.8,z,0.35,1.8,0.35,0x3c2c1e);}
+  for(const cz of[67,74,81]){
+    B.cyl(MX,7.9,cz,0.025,0.025,2.6,4,0x6a4c1e);
+    B.cyl(MX,6.5,cz,0.7,0.7,0.12,9,0x8a6b2a);
+    for(let k=0;k<6;k++){const a=k/6*Math.PI*2;
+      B.sph(MX+Math.cos(a)*0.62,6.62,cz+Math.sin(a)*0.62,0.09,0xffd27a);}
+    B.box(MX,6.62,cz,0.14,0.14,0.14,0xffc36a,{ch:'glowAlways'});}
+  // the Memorial Antechapel, northwest corner: the Founder rests here
+  {const AX=-17.4;
+   B.box(AX,2.4,63.2,0.5,4.8,6.4,BRICK,{solid:true});                // east partition
+   B.box(-20.7,2.4,66.5,2.6,4.8,0.5,BRICK,{solid:true});             // south partition, doorway to the nave
+   B.box(-17.65,2.4,66.5,0.5,4.8,0.5,BRICK,{solid:true});
+   B.box(-18.65,4.1,66.5,1.7,1.4,0.55,BRICK,{solid:true});           // lintel over the opening
+   B.box(-19.6,0.6,63,2.3,0.9,1.0,0x2b2b30,{solid:true});            // dark sarcophagus
+   B.box(-19.6,1.16,63,1.75,0.26,0.55,0xe8e4dc);                     // white marble effigy
+   B.sph(-20.35,1.2,63,0.17,0xe8e4dc);B.box(-19.3,1.24,63,0.5,0.1,0.3,0xdcd8d0);
+   B.box(-19.6,0.14,64.8,1.4,0.03,1.9,0x4a4a50);                     // crypt slab
+   for(const dz of[-1.4,0,1.4])B.box(X0+1.04,4.2,63+dz,0.2,2.6,0.7,0xdce4f0,{ch:'glowAlways'});  // triple lancets
+   B.box(X0+1.0,4.2,63,0.12,3,3.6,0x3a3630);
+  }
+  // ---- the gilded apse: The Realm of Learning ----
+  {const AR=3.2,AZ=84.2,GOLD=0xc9a04a,GOLD2=0xd8b158;
    const ROBE=[0x6e1f4a,0x24427c,0x2e5c3a,0x7c2a1e,0x54306e,0x1f5c5c,0x8a5216];
    for(let k=0;k<7;k++){const a=Math.PI*(0.10+0.80*k/6);            // concave niche, mouth toward the nave
      const px=MX+Math.cos(a)*AR,pz=AZ+Math.sin(a)*AR;
      const ry=Math.atan2(-Math.cos(a),-Math.sin(a));
      B.box(px,3.7,pz,1.78,5.7,0.3,k%2?GOLD:GOLD2,{ry});             // gold panel
      const nx=-Math.cos(a)*0.24,nz=-Math.sin(a)*0.24;
+     if(k===3){B.box(px+nx*0.5,2.6,pz+nz*0.5,1.3,2.6,0.18,GOLD,{ry});   // Philosophia enthroned
+       B.box(px+nx*2,1.35,pz+nz*2,1.1,0.5,0.5,0x8a6b2a,{ry});}
      B.box(px+nx,3.15,pz+nz,0.85,3.15,0.12,ROBE[k],{ry});           // robe
      B.sph(px+nx,5.05,pz+nz,0.24,0xd9b48a);                          // face
-     B.sph(px+nx*1.1,5.15,pz+nz*1.1,0.4,0xf0cf6a,{sz:0.22});         // halo
+     B.sph(px+nx*1.1,5.15,pz+nz*1.1,k===3?0.52:0.4,0xf0cf6a,{sz:0.22});  // halo
    }
    for(let k=0;k<9;k++){const px=MX-3.2+k*0.8,h=2.1+1.5*Math.sin(k/8*Math.PI);
-     B.cyl(px,1.9+h/2,78.55,0.11,0.13,h,7,0xd7b45c);}                // organ pipes
-   B.box(MX,6.75,79.15,8.6,0.85,0.5,GOLD2);                          // stepped gilt arch
-   B.box(MX,7.35,79.2,6.4,0.6,0.45,GOLD);
-   B.box(MX,5.9,79.1,9.4,0.3,0.55,0x8a6a2a);                         // arch shadow line
-   for(const sx of[-4.9,4.9]){B.cyl(MX+sx,3.0,77.4,0.3,0.36,6,9,GOLD2);
-     B.sph(MX+sx,6.15,77.4,0.5,GOLD);}                               // flanking gold columns
-   B.box(MX,0.49,74.6,10,0.06,0.9,GOLD);                             // gilt step edge
-   for(let k=0;k<10;k++)B.box(31.4+k*1.02,0.5,74.6,0.5,0.05,0.5,k%2?0x7c221e:0xc9a04a); // checker band
+     B.cyl(px,1.9+h/2,86.35,0.11,0.13,h,7,0xd7b45c);}                // organ pipes
+   B.box(MX,6.75,86.95,8.6,0.85,0.5,GOLD2);                          // stepped gilt arch
+   B.box(MX,7.35,87.0,6.4,0.6,0.45,GOLD);
+   B.box(MX,5.9,86.9,9.4,0.3,0.55,0x8a6a2a);
+   for(const sx of[-4.9,4.9]){B.cyl(MX+sx,3.0,85.2,0.3,0.36,6,9,GOLD2);
+     B.sph(MX+sx,6.15,85.2,0.5,GOLD);}
+   B.box(MX,0.49,82.4,10,0.06,0.9,GOLD);                             // gilt step edge
+   for(let k=0;k<10;k++)B.box(-18.6+k*1.02,0.5,82.4,0.5,0.05,0.5,k%2?0x7c221e:0xc9a04a);
   }
-  B.box(MX,1.98,78,2.8,0.12,1.25,0xc79a3a);                        // gold mensa
-  B.box(MX,3.1,78.9,0.16,1.5,0.16,0xd8b04a);B.box(MX,3.45,78.9,0.62,0.16,0.16,0xd8b04a); // cross
-  for(const cx of[-2.6,-1.8,1.8,2.6]){B.cyl(MX+cx,2.0,78.4,0.045,0.06,0.75,5,0xd8cdb4);
-    B.box(MX+cx,2.45,78.4,0.09,0.17,0.09,0xffc36a,{ch:'glowAlways'});}    // candles
-  B.box(MX,4.3,79.2,9,5.4,0.35,0xb08a3a);                          // gold mosaic apse wall
-  B.box(MX,7.4,79.1,7,0.8,0.3,0xd8b465,{ch:'glowAlways'});         // mosaic shimmer band
+  B.box(MX,1.98,85.8,2.8,0.12,1.25,0xc79a3a);                       // gold mensa
+  B.box(MX,3.1,86.7,0.16,1.5,0.16,0xd8b04a);B.box(MX,3.45,86.7,0.62,0.16,0.16,0xd8b04a);
+  for(const cx of[-2.6,-1.8,1.8,2.6]){B.cyl(MX+cx,2.0,86.2,0.045,0.06,0.75,5,0xd8cdb4);
+    B.box(MX+cx,2.45,86.2,0.09,0.17,0.09,0xffc36a,{ch:'glowAlways'});}
+  B.box(MX,4.3,87.0,9,5.4,0.35,0xb08a3a);                           // gold mosaic apse wall
+  B.box(MX,7.4,86.9,7,0.8,0.3,0xd8b465,{ch:'glowAlways'});
   // timber vault: sloped planes + pointed ribs
   for(const s of[-1,1])B.box(MX+s*3.9,11.9,MZ,8.6,0.28,Z1-Z0-1.2,WOOD,{rz:s*0.52});
-  for(let z=48;z<=78;z+=4.4)for(const s of[-1,1]){
+  for(let z=62;z<=86;z+=4.8)for(const s of[-1,1]){
     B.box(MX+s*5.3,9.2,z,0.5,3.4,0.34,0x3c2c1e,{rz:s*0.5});
     B.box(MX+s*2.2,12.1,z,0.5,3.6,0.34,0x3c2c1e,{rz:s*0.85});}
-  for(let z=50;z<=74;z+=8)for(const sx of[-5.5,5.5])               // wall lanterns
+  for(let z=68;z<=82;z+=7)for(const sx of[-5.5,5.5])                // wall lanterns
     B.box(MX+sx,4.2,z,0.16,0.3,0.16,0xffc36a,{ch:'glowAlways'});
-  // organ loft over entry: pipes
-  B.box(MX,4.7,46.3,9,0.4,3,WOOD);
+  // organ loft over the north end
+  B.box(MX,4.7,61.3,9,0.4,3,WOOD);
   for(let k=0;k<15;k++){const px=MX-4.2+k*0.6;
-    B.cyl(px,7.2+Math.abs(7-k)*-0.18+1.4,46.5,0.14,0.14,3.4-Math.abs(7-k)*0.25,6,0xb8a660);}
+    B.cyl(px,7.2+Math.abs(7-k)*-0.18+1.4,61.5,0.14,0.14,3.4-Math.abs(7-k)*0.25,6,0xb8a660);}
 }
 /* ============================== RISLEY GREAT HALL ============================== */
 {
@@ -985,10 +1026,11 @@ window.__routes.tunnels=[[18,10],[21.5,16],[24.4,16],[27,16],[31.6,16],[33.9,16]
   B.box(ox,oy+1.05,oz,0.8,0.14,10.4,0x8d8a80);
 }
 { // gorge fence + Fall Creek below
-  for(let x=-70;x<=88;x+=4){const fy=terrainH(x,-105.5);
+  for(let x=-70;x<=88;x+=4)if(x<-7||x>-1){const fy=terrainH(x,-105.5);
     B.cyl(x,fy+0.55,-105.5,0.05,0.05,1.1,4,0x2a2620);}
-  B.box(9,terrainH(9,-105.5)+0.95,-105.5,158,0.08,0.08,0x2a2620);
-  addSolid(9,0,-105.5,158,4,0.5);                                    // invisible rail collision
+  B.box(-38.5,terrainH(-38.5,-105.5)+0.95,-105.5,63,0.08,0.08,0x2a2620);
+  B.box(43.5,terrainH(43.5,-105.5)+0.95,-105.5,89,0.08,0.08,0x2a2620);
+  addSolid(-38.5,0,-105.5,63,4,0.5);addSolid(43.5,0,-105.5,89,4,0.5);   // rail solids, gap at the bridge
   const creek=new THREE.Mesh(new THREE.PlaneGeometry(320,9),
     new THREE.MeshStandardMaterial({color:0x2a3b46,roughness:0.15,metalness:0.5}));
   creek.rotation.x=-Math.PI/2;creek.position.set(-30,-21.6,-131);scene.add(creek);
@@ -1032,7 +1074,7 @@ for(const[vx,vy,vz]of STEAMVENTS)for(let k=0;k<7;k++){
   ivyPatch(-34.93,4,24,4,6,Math.PI/2); ivyPatch(-34.93,5,36.5,3,7,Math.PI/2);       // Uris east face
   ivyPatch(-52,3.5,17.9,6,5,0);                                                      // Uris north
   ivyPatch(-46.42,4,-9,2.6,6,Math.PI/2); ivyPatch(-50,7,-0.42,4,9,0);               // McGraw base
-  ivyPatch(27.93,4,55,3,6,Math.PI/2); ivyPatch(36,4.5,79.93,6,6,0);                 // Sage
+  ivyPatch(26.93,4,55,3,6,Math.PI/2); ivyPatch(36,4.5,78.1,6,6,0);                  // Sage Hall brick
   ivyPatch(-2,4,-74.93,5,6,0); ivyPatch(24,5,-74.93,4,7,0);                         // Risley front
 }
 { // grass tufts on the lawns (kept off the paths)
@@ -1700,14 +1742,107 @@ function mansard(cx,cy,cz,w,d,color,trim){                 // Second Empire roof
   B.box(40.4,1.9,21,0.9,3.8,3,0xb09a78,{solid:true});
   paneRow(40.1,6.5,21,Math.PI/2,3,3.6,1.4,2.4);
 }
-{ // Olin Library: 1959, honest concrete and glass
-  const MX=-16,MZ=55,H=13;
-  B.box(MX,H/2,MZ,28,H,18,0xb9b2a0,{solid:true});
-  B.box(MX,H+0.2,MZ,28.5,0.4,18.5,0xa39c8a);
+{ // Olin Library: 1959, honest concrete and glass (shifted clear of the relocated chapel)
+  const MX=-17,MZ=51,H=13;
+  B.box(MX,H/2,MZ,22,H,14,0xb9b2a0,{solid:true});
+  B.box(MX,H+0.2,MZ,22.5,0.4,14.5,0xa39c8a);
   for(let fy=2.2;fy<H-1;fy+=2.6){
-    B.box(MX,fy,MZ-9.1,24,1.5,0.16,0x2c343c);
-    B.box(MX,fy,MZ-9.14,23,1.3,0.2,0xffe0b0,{ch:'glowNight'});}
-  B.box(MX,H/2,MZ-9.3,0.5,H,0.5,0xa39c8a);
+    B.box(MX,fy,MZ-7.1,18,1.5,0.16,0x2c343c);
+    B.box(MX,fy,MZ-7.14,17,1.3,0.2,0xffe0b0,{ch:'glowNight'});}
+  B.box(MX,H/2,MZ-7.3,0.5,H,0.5,0xa39c8a);
+}
+/* ============================== WS1: LAYOUT ACCURACY ============================== */
+{ // Sage Hall, the Johnson School, backfilling the chapel's old site
+  const X0=27,X1=45,Z0=46,Z1=78,MX=36,MZ=62,H=13,BR=0x7a3c30,CR=0xcfc4a8,SL=0x4c4f58;
+  B.box(MX,H/2,MZ,X1-X0,H,Z1-Z0,BR,{solid:true});
+  B.wedge(MX,H,MZ,Z1-Z0+1,6.4,X1-X0-4,SL,{ry:Math.PI/2});           // steep slate roof
+  B.wedge(MX,H,56,X1-X0+1,5.4,10,SL);                                // cross gable
+  for(const by of[4.4,8.8])B.box(MX,by,MZ,X1-X0+0.14,0.4,Z1-Z0+0.14,CR);  // cream stringcourses
+  B.box(30,11,49,7,9,7,BR,{solid:true});                             // corner tower
+  B.cyl(30,17.8,49,0.12,4.6,4.4,4,SL,{ry:Math.PI/4});                // pyramidal cap
+  for(const fy of[2.8,6.4,10.2]){paneRow(26.9,fy,MZ,Math.PI/2,5,5.2,1.6,2.4);
+    paneRow(MX,fy,45.9,0,3,4.4,1.6,2.4);}
+  for(let k=0;k<5;k++)B.box(26.94,4.4,48.6+k*5.2,0.14,0.4,2.0,CR);   // arched hoods
+  B.box(26.9,2.2,62,0.2,2.6,10,0xd8bf92,{ch:'glowNight'});           // atrium strip at dusk
+  B.box(26.7,1.9,68,2.8,3.8,0.9,CR,{solid:true});B.box(26.5,1.75,68,0.5,3.4,1.9,0x241f1a);
+  plinth(27,46,45,78,0x5c2c22);
+}
+{ // the low stone link wing: McGraw Tower attaches to Uris
+  B.box(-52.5,2,8.8,9,4,17.6,0xb0a183,{solid:true});
+  B.box(-52.5,4.2,8.8,9.4,0.4,18,0xc6b89a);
+  paneRow(-48.1,2.2,8.8,Math.PI/2,4,3.8,1.2,1.6);
+  crenel(-52.5,4.7,0.4,8,true,0xc6b89a,1.8);
+}
+{ // Johnson Museum of Art: the sewing machine at the slope crest, north of the Stone Row
+  const CON=0x9d9a94,X0=-76,X1=-58,Z0=-68,Z1=-50,MX=-67,MZ=-59;
+  for(const[px,pz]of[[-74,-66],[-60,-66],[-74,-52],[-60,-52]])
+    B.box(px,2.5,pz,1.2,5,1.2,CON,{solid:true});                     // slender piers
+  B.box(-63,2.5,MZ,6,5,6,CON,{solid:true});                          // core
+  B.box(MX,8.5,MZ,X1-X0,7,Z1-Z0,CON,{solid:true});                   // the cantilevered top floors
+  B.box(MX,13.4,-63,X1-X0,2.8,8,CON,{solid:true});                   // upper stack
+  B.box(MX,15.0,MZ,10,0.5,6,0x8a8781);
+  for(const dx of[-6,-1,4])B.box(MX+dx,8.5,Z0-0.06,2.2,5.4,0.16,0x2c343c);  // deep window slots
+  for(const dz of[-5,1])B.box(X0-0.06,8.5,MZ+dz,0.16,5.4,2.2,0x2c343c);
+  B.box(X1+0.06,9.5,-56,0.16,3.6,5,0x2c343c);
+  // sculpture garden, east lawn
+  for(const[sx,sz,r]of[[-54.5,-53,0.35],[-53,-53,-0.5],[-53.8,-51.9,1.6]])
+    B.box(sx,1.5,sz,0.35,3.2,0.35,0xb32020,{rz:r});                  // red steel arc
+  B.box(-52.5,1.15,-56,1.3,1.3,1.3,0x1c1f24,{ry:0.78,rz:0.6,solid:true});  // black cube on point
+}
+{ // Klarman Hall: glass atrium grafted on Goldwin Smith's back
+  B.box(78,4,-9,4,8,22,0x8d939a,{solid:true});
+  B.box(80.06,3.6,-9,0.2,6.4,20,0xcfe6ee,{ch:'glowNight'});
+  for(let mz=-18;mz<=0;mz+=2.4)B.box(80.1,3.6,mz,0.16,6.8,0.24,0x555a60);
+  B.box(78,8.2,-9,4.4,0.4,22.4,0x878d94);
+}
+{ // Beebe Lake, tree-lined, behind the dam
+  const bw=new THREE.Mesh(new THREE.PlaneGeometry(88,28),
+    new THREE.MeshStandardMaterial({color:0x2e4a63,roughness:0.18,metalness:0.55}));
+  bw.rotation.x=-Math.PI/2;bw.position.set(67,-7,-131);scene.add(bw);
+  B.box(23.5,-7.6,-131,3,4.4,26,0x8a8781,{solid:true});              // the dam lip
+  for(const[tx,tz]of[[30,-114],[46,-113.5],[64,-114],[82,-113.8],[100,-114.5],
+                     [34,-148],[56,-148.5],[78,-148],[98,-147.6],[110,-146]])tree(tx,tz);
+}
+{ // the Suspension Bridge over Fall Creek
+  const STEEL=0x33383f,BX=-4,N=9,Z0=-105.4,ZL=-35.2;
+  B.box(BX,0.08,-104.4,3.4,0.3,1.6,0x77746a,{solid:true});           // south abutment
+  B.box(BX,0.08,-141.6,3.4,0.3,1.8,0x77746a,{solid:true});           // north abutment
+  for(const tz of[-105.6,-140.4]){                                    // steel towers
+    for(const s of[-1,1])B.box(BX+s*1.6,4.75,tz,0.55,9.5,0.55,STEEL,{solid:true});
+    B.box(BX,9.15,tz,4.2,0.5,0.5,STEEL);}
+  const dy=t=>0.35-1.5*Math.sin(Math.PI*t);
+  for(let k=0;k<N;k++){const t=(k+0.5)/N,zc=Z0+ZL*t,y=dy(t);
+    B.box(BX,y,zc,2.7,0.25,4.05,0x6a5a48,{solid:true});               // deck plank
+    for(const s of[-1,1]){B.box(BX+s*1.32,y+0.62,zc,0.09,1.0,4.05,STEEL,{solid:true});
+      B.box(BX+s*1.32,y+1.16,zc,0.14,0.09,4.1,0x8a8781);}}
+  for(let k=0;k<12;k++){const t0=k/12,t1=(k+1)/12;                    // main cables + hangers
+    const cy=t=>9.2-7.8*Math.sin(Math.PI*t);
+    const z0=Z0+ZL*t0,z1=Z0+ZL*t1,y0=cy(t0),y1=cy(t1);
+    for(const s of[-1,1]){
+      B.box(BX+s*1.32,(y0+y1)/2,(z0+z1)/2,0.08,0.08,Math.hypot(z1-z0,y1-y0),STEEL,
+        {rx:Math.atan2(y1-y0,z1-z0)});
+      if(k>0)B.box(BX+s*1.32,(y0+dy(t0))/2+0.35,z0,0.05,y0-dy(t0)-0.5,0.05,STEEL);}}
+  person(-6.3,-102.8,'stand',2.7);
+}
+{ // far east: Mann Library facade + the Bradfield monolith
+  const my=terrainH(160,48);
+  B.box(160,my+5,48,22,10,8,0xdcd6c4,{solid:true});
+  for(let px=151;px<=169;px+=2.6)B.box(px,my+5,43.9,1.1,8,0.16,0xc4bda8);
+  B.box(160,my+0.15,42.8,10,0.3,2.4,0x9b917d,{solid:true});
+  const by=terrainH(160,62);
+  B.box(160,by+15,62,11,30,11,0x6e4634,{solid:true});                 // Bradfield, famously windowless
+  B.box(160,by+30.3,62,11.5,0.6,11.5,0x54371f);
+}
+window.__routes.sage=[[-27,70],[-24.6,74],[-21,74],[-14,74],[-14,69],[-16.5,68],[-18.6,67.6],[-18.6,65],[-19.5,63.4]];
+window.__routes.johnson=[[-52,-30],[-55,-44],[-57,-49.4],[-62,-51],[-68,-54]];
+window.__routes.bridge=[[-4,-100],[-4,-104.3],[-4,-108],[-4,-114],[-4,-122],[-4,-130],[-4,-137],[-4,-141.4],[-4,-144.5]];
+{ // WS1 paint
+  path([[-27,74],[-24,74]],2.6,'#b3a68e');
+  g2.fillStyle='#9b917d';
+  for(const[px,pz,r]of[[-24.6,74,2.6],[-4,-102.5,2],[-4,-143.5,2]])
+    {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
+  path([[-4,-98],[-4,-103.5]],2.2);path([[-4,-142.5],[-4,-148]],2.2);
+  groundTex.needsUpdate=true;
 }
 /* ============================== POLISH: PLINTHS, IVY, LIFE ============================== */
 {
@@ -1797,7 +1932,7 @@ function plight(x,y,z,color,int,dist,opt={}){const L=new THREE.PointLight(color,
   return Object.assign({L,base:int,mode:'always',fl:0.06,ph:rnd(9),drop:false},opt);}
 const PL=[
   plight(-64,6.5,30,0xffd9a0,28,27),  plight(-46,6.5,30,0xffd9a0,28,27),        // reading room
-  plight(36,4.5,62,0xffb46a,22,27,{fl:0.12}), plight(36,4,76.5,0xffc06a,16,16,{fl:0.16}), // chapel
+  plight(-14,4.5,72,0xffb46a,22,27,{fl:0.12}), plight(-14,4,84.5,0xffc06a,16,16,{fl:0.16}), // chapel
   plight(20,2.2,-89.5,0xff8a3a,26,21,{fl:0.3}), plight(8,5.5,-84,0xffc98a,18,29),          // risley
   plight(-52,33.5,-6,0xffd9a0,12,18,{mode:'night'}),                                       // belfry
   plight(34,-4.2,22,0xffc98a,10,14,{fl:0.5,drop:true}),                                    // tunnelsâ€¦
@@ -1808,9 +1943,10 @@ const PL=[
   plight(-56,8.4,30,0xffe0b8,12,20),                                // reading room: high centre wash
   plight(-66,2.1,30,0xffc87a,6,8,{fl:0.10}), plight(-56,2.1,30,0xffc87a,6,8,{fl:0.10}),
   plight(-46,2.1,30,0xffc87a,6,8,{fl:0.10}),                        // banker-lamp pools
-  plight(36,3.8,77.4,0xffc873,26,17,{fl:0.07}),                     // sage: apse uplight
-  plight(36,7.3,77.8,0xffd9a0,11,11),                               // sage: dome wash
-  plight(36,8.0,55,0xffcf9a,8,18), plight(36,8.0,69,0xffcf9a,8,18), // sage: nave warmth
+  plight(-14,3.8,85.2,0xffc873,26,17,{fl:0.07}),                    // sage: apse uplight
+  plight(-14,7.3,85.6,0xffd9a0,11,11),                              // sage: dome wash
+  plight(-14,8.0,67,0xffcf9a,8,18), plight(-14,8.0,79,0xffcf9a,8,18), // sage: nave warmth
+  plight(-19.5,3.2,63,0x9fb4d8,6,9),                                // the antechapel, cool and dim
   plight(-61,3.2,50.6,0xff9a4a,26,18,{fl:0.28}),                    // the Straight: fireplace
   plight(-58,6.5,62,0xffd9a0,26,27),                                // Memorial Room wash
   plight(-60,6.8,95,0xffe0b8,27,22), plight(-50,6.8,95,0xffe0b8,27,22), // Gould pools
@@ -1833,10 +1969,10 @@ function shaft(x0,y0,z0,x1,y1,z1,w,axis,color,kind){
     side:THREE.DoubleSide,blending:THREE.AdditiveBlending,depthWrite:false}));
   scene.add(m);SHAFTS.push({m,kind});
 }
-for(let z=48.5;z<=76;z+=6.5){                       // chapel: sun through the side glass
-  shaft(28.9,7.6,z,34.6,0.3,z,2.0,'z',0xf0b06a,'W');
-  shaft(43.1,7.6,z,37.4,0.3,z,2.0,'z',0xf0b06a,'E');}
-shaft(36,8,79.2,36,0.3,72.5,6,'x',0xffd9a0,'S');    // the great window
+for(const z of[64,68.5,80,84.5]){                   // chapel: sun through the side glass
+  shaft(-21.1,7.6,z,-15.4,0.3,z,2.0,'z',0xf0b06a,'W');
+  shaft(-6.9,7.6,z,-12.6,0.3,z,2.0,'z',0xf0b06a,'E');}
+shaft(-21.5,8.2,74,-12,0.3,74,3.4,'z',0xffd9a0,'W');   // the rose pours across the nave at dusk
 shaft(-60,9.1,30,-58.8,0.4,30,2.6,'z',0xfff0d0,'RR');
 shaft(-50,9.1,30,-51.2,0.4,30,2.6,'z',0xfff0d0,'RR');
 shaft(-75.7,8.6,30,-66,0.4,30,4.6,'z',0xffe2ae,'W');   // the great west window pours in at sunset
@@ -1871,9 +2007,15 @@ const AREAS=[
   {name:'McGraw Tower',sub:()=>P.pos.y>28?'the chimes, you climbed all 161':'161 steps to the top',
    test:p=>p.x>-58&&p.x<-46&&p.z>-12&&p.z<0},
   {name:'A.D. White Reading Room',sub:'Uris Library',test:p=>p.x>-78&&p.x<-34&&p.z>17&&p.z<43},
-  {name:'Sage Chapel',sub:'est. 1875',test:p=>p.x>27&&p.x<45&&p.z>43&&p.z<81},
+  {name:'Sage Chapel',sub:()=>P.pos.x<-16.9&&P.pos.z<66.8?'the Founder rests here':'est. 1875',
+   test:p=>p.x>-23&&p.x<-4&&p.z>59&&p.z<89},
+  {name:'Sage Hall',sub:'the Johnson School',test:p=>p.x>26&&p.x<46&&p.z>45&&p.z<79},
   {name:'Risley Great Hall',sub:'Prudence Risley Hall',test:p=>p.x>-16&&p.x<32&&p.z>-94&&p.z<-74},
+  {name:'the Suspension Bridge',sub:'do not look down',
+   test:p=>p.x>-7&&p.x<-1&&p.z>-142&&p.z<-103&&p.y>-3},
   {name:'Fall Creek Gorge',sub:'mind the fence',test:p=>p.z<-104},
+  {name:'Johnson Museum',sub:'the sewing machine',
+   test:p=>p.x>-77&&p.x<-50&&p.z>-69&&p.z<-49},
   {name:'Libe Slope',sub:'far above Cayugaâ€™s waters',test:p=>p.x<-72},
   {name:'The Big Red Barn',sub:'TGIF, grads only',test:p=>p.x>60&&p.x<81&&p.z>-57&&p.z<-41},
   {name:'Uris Hall',sub:'they say the steel will finish weathering any year now',
@@ -1900,6 +2042,9 @@ function updateArea(){
     elMain.textContent=A.name;elSub.textContent=typeof A.sub==='function'?A.sub():A.sub;
     elLabel.style.opacity=1;clearTimeout(labelTimer);
     labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);}
+  if(typeof A.sub==='function'&&A.name===curArea){const s2=A.sub();
+    if(s2!==elSub.textContent){elSub.textContent=s2;elLabel.style.opacity=1;
+      clearTimeout(labelTimer);labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);}}
   if(curArea==='McGraw Tower'&&P.pos.y>28&&!chimed){chimed=true;
     elSub.textContent=AREAS[1].sub();elLabel.style.opacity=1;
     clearTimeout(labelTimer);labelTimer=setTimeout(()=>elLabel.style.opacity=0,4200);playChimes();}
@@ -1927,8 +2072,9 @@ function animate(){
 }
 setInterval(()=>{if(document.hidden)step()},120);   // keep simulating when the tab is hidden
 window.__step=()=>step();
-function step(){
-  const dt=Math.min(clockT.getDelta(),0.05);T+=dt;
+window.__tick=(n=600,d=0.033)=>{for(let k=0;k<n;k++)step(d);};   // synchronous sim driver for tests
+function step(fdt){
+  const dt=fdt!==undefined?fdt:Math.min(clockT.getDelta(),0.05);T+=dt;
   frames++;fAcc+=dt;if(fAcc>0.5){fpsNow=Math.round(frames/fAcc);frames=0;fAcc=0;}
   stepPlayer(dt);
   if(autopilot&&autopilot.done){const r=autopilot.res;autopilot=null;
@@ -2010,7 +2156,7 @@ function step(){
     l.m.rotation.set(T*2.2+l.ph,T*1.6,T*2.8+l.ph*3);}
   glitter.material.opacity=gold*0.4*(1-ug);glitter.material.color.copy(asCol(PAL.sun));
   avia.visible=(T%1.6)<0.8&&glowF>0.15;
-  if(FXMODE==='none')renderer.render(scene,camera);else composer.render();
+  if(fdt===undefined){if(FXMODE==='none')renderer.render(scene,camera);else composer.render();}
 }
 /* ============================== DEBUG / VERIFY API ============================== */
 window.__demo={
