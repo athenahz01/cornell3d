@@ -41,6 +41,16 @@
   .places{margin-top:26px;font-size:12px;letter-spacing:.14em;color:#8e8570;line-height:1.9}
   @keyframes pulse{0%,100%{opacity:.5}50%{opacity:1}}
   #fadein{position:fixed;inset:0;background:#000;z-index:8;pointer-events:none;transition:opacity 3s ease;opacity:1}
+  /* ---------- campus map ---------- */
+  #mapOv{position:fixed;inset:0;z-index:9;display:none;align-items:center;justify-content:center;
+    background:rgba(8,10,16,.62);backdrop-filter:blur(5px)}
+  #mapOv.on{display:flex}
+  #mapCv{max-width:92vw;max-height:90vh;border:2px solid #6a5f4c;border-radius:6px;
+    box-shadow:0 24px 90px rgba(0,0,0,.7);cursor:crosshair}
+  #mapX{position:absolute;top:26px;right:34px;color:#e8dfc8;font-size:30px;cursor:pointer;
+    font-family:Georgia;line-height:1;padding:6px 10px}
+  #mapX:hover{color:#fff}
+  #compass{position:absolute;top:8px;left:50%;transform:translateX(-50%);opacity:.85}
 </style>
 </head>
 <body>
@@ -48,9 +58,11 @@
   <div id="vignette"></div>
   <div id="areaLabel"><span id="areaMain"></span><span class="sub" id="areaSub"></span></div>
   <div id="clock"></div>
-  <div id="hint">W A S D move &nbsp;Â·&nbsp; SHIFT run &nbsp;Â·&nbsp; SPACE jump</div>
+  <div id="hint">W A S D move &nbsp;&middot;&nbsp; SHIFT run &nbsp;&middot;&nbsp; SPACE jump &nbsp;&middot;&nbsp; M map</div>
   <div id="cross"></div>
+  <canvas id="compass" width="300" height="26"></canvas>
 </div>
+<div id="mapOv"><canvas id="mapCv" width="1400" height="1400"></canvas><div id="mapX">&times;</div></div>
 <div id="fadein"></div>
 <div id="overlay">
   <div class="panel">
@@ -63,12 +75,12 @@
       <div><b>MOUSE</b> look</div>
       <div><b>SHIFT</b> run</div>
       <div><b>SPACE</b> jump</div>
-      <div><b>ESC</b> pause</div>
+      <div><b>M</b> campus map</div>
       <div><b>CLICK</b> begin</div>
     </div>
     <div class="begin" id="beginText">Click to step onto the quad</div>
-    <div class="places">MCGRAW TOWER Â· THE GOULD READING ROOM Â· DUFFIELD ATRIUM<br>
-      SAGE CHAPEL Â· LIBE SLOPE Â· THE BIG RED BARN Â· HO PLAZA Â· and the tunnels below</div>
+    <div class="places">MCGRAW TOWER &middot; SAGE CHAPEL &middot; THE SUSPENSION BRIDGE &middot; DUFFIELD ATRIUM<br>
+      THE GOULD READING ROOM &middot; LIBE SLOPE &middot; THE BIG RED BARN &middot; and the tunnels below</div>
   </div>
 </div>
 <script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -266,6 +278,7 @@ overlay.addEventListener('click',()=>{
 });
 document.addEventListener('pointerlockchange',()=>{
   locked=document.pointerLockElement===renderer.domElement;
+  if(typeof mapOn!=='undefined'&&mapOn)return;
   if(!locked&&started){overlay.classList.remove('hidden');
     document.getElementById('beginText').textContent='Click to resume';}
 });
@@ -2193,7 +2206,8 @@ window.__tick=(n=600,d=0.033)=>{for(let k=0;k<n;k++)step(d);};   // synchronous 
 function step(fdt){
   const dt=fdt!==undefined?fdt:Math.min(clockT.getDelta(),0.05);T+=dt;
   frames++;fAcc+=dt;if(fAcc>0.5){fpsNow=Math.round(frames/fAcc);frames=0;fAcc=0;}
-  stepPlayer(dt);
+  if(!mapOn)stepPlayer(dt);else drawMapFrame();
+  if(started&&!mapOn)updCompass();
   if(autopilot&&autopilot.done){const r=autopilot.res;autopilot=null;
     if(r)r({pos:[+P.pos.x.toFixed(1),+P.pos.y.toFixed(1),+P.pos.z.toFixed(1)],area:curArea});}
   // --- celestial state ---
@@ -2286,6 +2300,147 @@ window.__demo={
   time(t){dayT=t;}, fps:()=>fpsNow, routes:window.__routes, solids:()=>solids.length,
   solidsAt(x,z,y=0,r=0.5){return solids.filter(s=>x>s.x0-r&&x<s.x1+r&&z>s.z0-r&&z<s.z1+r&&s.y1>y&&s.y0<y+1.8)
     .map(s=>[s.x0,s.y0,s.z0,s.x1,s.y1,s.z1].map(v=>+v.toFixed(2)));}};
+/* ============================== THE CAMPUS MAP ============================== */
+const MAP_SPAWNS=[
+ {name:'McGraw Tower',x:-52,z:-6,spawn:[-44,0.2,-6,Math.PI/2]},
+ {name:'A.D. White Reading Room',x:-56,z:30,spawn:[-31,0.2,30,Math.PI/2]},
+ {name:'Sage Chapel',x:-14,z:74,spawn:[-26,0.2,74,-Math.PI/2]},
+ {name:'Sage Hall',x:36,z:62,spawn:[22,0.2,68,-Math.PI/2]},
+ {name:'Risley Great Hall',x:8,z:-84,spawn:[8,0.2,-70,0]},
+ {name:'the Suspension Bridge',x:-4,z:-122,spawn:[-4,0.2,-100,0]},
+ {name:'Johnson Museum',x:-67,z:-59,spawn:[-54,0.2,-44,0.6]},
+ {name:'Libe Slope',x:-100,z:10,spawn:[-82,0,10,Math.PI/2]},
+ {name:'The Steam Tunnels',x:26,z:16,spawn:[21,0.2,16,-Math.PI/2]},
+ {name:'Ho Plaza',x:-30,z:66,spawn:[-27,0.2,60,Math.PI]},
+ {name:'Willard Straight Hall',x:-61,z:60,spawn:[-44,0.2,60,Math.PI/2]},
+ {name:'The Gould Reading Room',x:-57,z:95,spawn:[-46,0.2,87.5,Math.PI]},
+ {name:'Anabel Taylor Hall',x:-23,z:104,spawn:[-37,0.2,112,-Math.PI/2]},
+ {name:'Duffield Atrium',x:46,z:140,spawn:[31,0.2,140,-Math.PI/2]},
+ {name:'The Engineering Quad',x:22,z:147,spawn:[26,0.2,143,0.5]},
+ {name:'Gates Hall',x:71,z:105,spawn:[71,0.2,91,Math.PI]},
+ {name:'Cascadilla Gorge',x:-2,z:194,spawn:[-5,0.2,183,Math.PI]},
+ {name:'The Big Red Barn',x:74,z:-49,spawn:[65.3,0.2,-48.6,-Math.PI/2]},
+ {name:'Bailey Hall',x:94,z:-32,spawn:[82,0.2,-32,-Math.PI/2]},
+ {name:'Barton Hall',x:101,z:46,spawn:[81,0.2,46,-Math.PI/2]},
+ {name:'Goldwin Smith Hall',x:63,z:-9,spawn:[43,0.2,-7,-Math.PI/2]},
+ {name:'The Arts Quad',x:0,z:0,spawn:[10,0.2,8,Math.PI/2]}];
+const MAPS3=2.9,MAPOX=42,MAPOY=150;
+const w2mx=x=>MAPOX+(x+205)*MAPS3, w2my=z=>MAPOY+(z+152)*MAPS3;
+const m2wx=px=>(px-MAPOX)/MAPS3-205, m2wz=py=>(py-MAPOY)/MAPS3-152;
+const mapOff=document.createElement('canvas');mapOff.width=1400;mapOff.height=1400;
+{ // drawn once at startup: an illustrated parchment map
+  const m=mapOff.getContext('2d');
+  m.fillStyle='#f4ecd8';m.fillRect(0,0,1400,1400);
+  m.fillStyle='#ece2c8';for(let k=0;k<400;k++)m.fillRect(Math.random()*1400,Math.random()*1400,3,3);
+  const rect=(x0,z0,x1,z1,c)=>{m.fillStyle=c;
+    m.fillRect(w2mx(x0),w2my(z0),(x1-x0)*MAPS3,(z1-z0)*MAPS3);};
+  rect(-230,-160,-200,220,'#a8bcc9');                                  // Cayuga edge
+  rect(22,-146,112,-116,'#a8bcc9');                                    // Beebe Lake
+  m.fillStyle='#5a5348';                                                // gorges, torn dark bands
+  m.beginPath();
+  for(let x=-205;x<=245;x+=12)m.lineTo(w2mx(x),w2my(-104-Math.random()*3));
+  for(let x=245;x>=-205;x-=12)m.lineTo(w2mx(x),w2my(-134+Math.random()*4));
+  m.closePath();m.fill();
+  m.beginPath();
+  for(let x=-32;x<=92;x+=10)m.lineTo(w2mx(x),w2my(187-Math.random()*2));
+  for(let x=92;x>=-32;x-=10)m.lineTo(w2mx(x),w2my(210+Math.random()*2));
+  m.closePath();m.fill();
+  m.strokeStyle='#7c93a8';m.lineWidth=6;
+  m.beginPath();m.moveTo(w2mx(-200),w2my(-131));m.lineTo(w2mx(120),w2my(-131));m.stroke();
+  m.beginPath();m.moveTo(w2mx(-28),w2my(198));m.lineTo(w2mx(90),w2my(198));m.stroke();
+  rect(-66,-44,66,44,'#cdd8bc');rect(4,126,34,154,'#cdd8bc');           // lawns
+  rect(-62,100,-40,108,'#cdd8bc');rect(-160,-40,-74,60,'#d3dcc0');      // law court + the slope
+  m.strokeStyle='#c2b195';m.lineWidth=5;m.lineCap='round';
+  const line=pts=>{m.beginPath();m.moveTo(w2mx(pts[0][0]),w2my(pts[0][1]));
+    for(let k=1;k<pts.length;k++)m.lineTo(w2mx(pts[k][0]),w2my(pts[k][1]));m.stroke();};
+  line([[-58,-42],[58,42]]);line([[-58,42],[58,-42]]);line([[-58,0],[58,0]]);line([[0,-48],[0,48]]);
+  m.lineWidth=9;line([[-34,46],[-30,66],[-26,88]]);
+  m.lineWidth=7;line([[-40,121],[30,121],[30,103],[57,103],[58,121],[90,121]]);
+  line([[81,-56],[81,118]]);
+  m.lineWidth=5;line([[26,121],[26,143]]);line([[-37,90],[-37,118]]);
+  line([[-66,4],[-96,14],[-140,22],[-178,-2]]);line([[-4,-98],[-4,-146]]);
+  line([[0,-48],[-8.5,-58],[-4,-70],[8,-74]]);line([[22,150],[-5,157],[-5,185]]);
+  for(const[a,b,c,d]of BRECTS){m.fillStyle='#c9bfae';m.strokeStyle='#8a7f6d';m.lineWidth=1;
+    m.fillRect(w2mx(a),w2my(b),(c-a)*MAPS3,(d-b)*MAPS3);
+    m.strokeRect(w2mx(a),w2my(b),(c-a)*MAPS3,(d-b)*MAPS3);}
+  m.font='600 26px Georgia';m.fillStyle='#5a5142';
+  try{m.letterSpacing='3px';}catch(e){}
+  m.textAlign='center';
+  m.fillStyle='#8a2430';m.font='600 44px Georgia';m.fillText('THE HILL',700,64);
+  m.font='16px Georgia';m.fillStyle='#8e8570';m.fillText('AN EXPLORABLE CORNELL',700,92);
+  m.font='600 15px Georgia';
+  m.strokeStyle='#f4ecd8';m.lineWidth=4;m.lineJoin='round';
+  for(const s of MAP_SPAWNS){m.fillStyle='#b31b1b';
+    m.beginPath();m.arc(w2mx(s.x),w2my(s.z),6,0,7);m.fill();
+    m.strokeText(s.name.toUpperCase(),w2mx(s.x),w2my(s.z)-11);
+    m.fillStyle='#5a5142';m.fillText(s.name.toUpperCase(),w2mx(s.x),w2my(s.z)-11);}
+  const cx=1310,cy=190;                                                 // compass rose
+  m.strokeStyle='#8a7f6d';m.lineWidth=2;m.beginPath();m.arc(cx,cy,36,0,7);m.stroke();
+  m.fillStyle='#b31b1b';m.beginPath();m.moveTo(cx,cy-30);m.lineTo(cx-8,cy+6);m.lineTo(cx+8,cy+6);m.closePath();m.fill();
+  m.fillStyle='#5a5142';m.font='600 20px Georgia';m.fillText('N',cx,cy-44);
+}
+const mapOv=document.getElementById('mapOv'),mapCv=document.getElementById('mapCv'),
+      mctx=mapCv.getContext('2d');
+let mapOn=false,mapHover=null,mapShake=0;
+function drawMapFrame(){
+  mctx.drawImage(mapOff,0,0);
+  if(mapHover!==null){const s=MAP_SPAWNS[mapHover];
+    mctx.strokeStyle='#b31b1b';mctx.lineWidth=3;
+    mctx.beginPath();mctx.arc(w2mx(s.x),w2my(s.z),11,0,7);mctx.stroke();}
+  const px=w2mx(P.pos.x)+(mapShake>0?Math.sin(T*60)*4:0),py=w2my(P.pos.z);
+  if(mapShake>0)mapShake-=0.05;
+  mctx.save();mctx.translate(px,py);mctx.rotate(-P.yaw);
+  mctx.fillStyle='#b31b1b';mctx.strokeStyle='#f4ecd8';mctx.lineWidth=2;
+  mctx.beginPath();mctx.moveTo(0,-13);mctx.lineTo(-8,9);mctx.lineTo(8,9);mctx.closePath();
+  mctx.fill();mctx.stroke();mctx.restore();
+}
+function openMap(){if(!started)return;mapOn=true;mapOv.classList.add('on');
+  try{if(document.pointerLockElement&&document.exitPointerLock)document.exitPointerLock();}catch(e){}
+  drawMapFrame();}
+function closeMap(relock=true){mapOn=false;mapOv.classList.remove('on');
+  if(relock&&started){try{renderer.domElement.requestPointerLock&&renderer.domElement.requestPointerLock();}catch(e){}}}
+function mapGoto(s){document.getElementById('fadein').style.opacity=1;
+  setTimeout(()=>document.getElementById('fadein').style.opacity=0,260);
+  P.pos.set(s.spawn[0],s.spawn[1],s.spawn[2]);P.vel.set(0,0,0);P.yaw=s.spawn[3];P.pitch=0;
+  closeMap();}
+function mapPx(e){const r=mapCv.getBoundingClientRect();
+  return[(e.clientX-r.left)*1400/r.width,(e.clientY-r.top)*1400/r.height];}
+mapCv.addEventListener('mousemove',e=>{const[px,py]=mapPx(e);mapHover=null;
+  for(let k=0;k<MAP_SPAWNS.length;k++){const s=MAP_SPAWNS[k];
+    if(Math.hypot(px-w2mx(s.x),py-w2my(s.z))<15){mapHover=k;break;}}
+  if(mapOn)drawMapFrame();});
+mapCv.addEventListener('click',e=>{const[px,py]=mapPx(e);
+  if(mapHover!==null){mapGoto(MAP_SPAWNS[mapHover]);return;}
+  const wx=m2wx(px),wz=m2wz(py);
+  if(wx<-200||wx>240||wz<-148||wz>212||inBuilding(wx,wz)){mapShake=1;drawMapFrame();return;}
+  const g=groundAt(wx,wz,999);
+  if(g<-40){mapShake=1;drawMapFrame();return;}
+  mapGoto({spawn:[wx,g+0.2,wz,P.yaw]});});
+document.getElementById('mapX').addEventListener('click',()=>closeMap());
+addEventListener('keydown',e=>{
+  if(e.code==='KeyM'&&started&&overlay.classList.contains('hidden')){mapOn?closeMap():openMap();}
+  if(e.code==='Escape'&&mapOn)closeMap(false);});
+// compass ribbon
+const cmp=document.getElementById('compass'),cctx=cmp.getContext('2d');
+let lastHdg=-99;
+function heading(){return ((-P.yaw*180/Math.PI)%360+360)%360;}
+function updCompass(){const h=heading();if(Math.abs(h-lastHdg)<0.4)return;lastHdg=h;
+  cctx.clearRect(0,0,300,26);
+  cctx.fillStyle='rgba(12,14,20,0.35)';cctx.fillRect(0,0,300,26);
+  const DIRS=[['N',0],['NE',45],['E',90],['SE',135],['S',180],['SW',225],['W',270],['NW',315]];
+  cctx.textAlign='center';cctx.textBaseline='middle';
+  for(const[t,d]of DIRS){let diff=((d-h+540)%360)-180;
+    if(Math.abs(diff)>62)continue;
+    const x=150+diff*2.2,a=1-Math.abs(diff)/70;
+    cctx.font=(t.length>1?'11':'15')+'px Georgia';
+    cctx.fillStyle='rgba(232,223,200,'+(0.25+0.75*a)+')';
+    cctx.fillText(t,x,13);}
+  cctx.fillStyle='#e8b04b';cctx.fillRect(149,2,2,5);}
+window.__mapHooks={drawMapFrame,updCompass,isOpen:()=>mapOn};
+Object.assign(window.__demo,{
+  mapOpen:()=>openMap(),mapClose:()=>closeMap(false),
+  mapTeleport(name){const s=MAP_SPAWNS.find(v=>v.name===name);if(s)mapGoto(s);return !!s;},
+  heading});
 animate();
 </script>
 </body>
