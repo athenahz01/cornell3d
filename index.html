@@ -112,7 +112,7 @@ const FXMODE=new URLSearchParams(location.search).get('fx')||'all';
 if(FXMODE==='nobloom')bloomPass.enabled=false;
 window.__fx={composer,bloomPass,FXMODE};
 window.__shot=async name=>{window.__step&&window.__step();
-  const d=document.querySelector('canvas').toDataURL('image/jpeg',0.85);
+  const d=document.querySelector('body > canvas').toDataURL('image/jpeg',0.85);
   await fetch('/shot?name='+name,{method:'POST',body:d});return 'saved '+name;};
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
   renderer.setSize(innerWidth,innerHeight);composer.setSize(innerWidth,innerHeight);});
@@ -483,7 +483,8 @@ const LAMPS=[];
   [-10,117.5],[20,117.5],[50,117.5],[80,117.5],[-38.9,101],[-56,76],                        // Campus Road + the law court
   [28.5,127],[12,145],[30,152],[24,166],[48,143],[62,118.5],                                // Engineering Quad
   [-26.6,187],[-21.4,211],                                                                  // Cascadilla bridge
-  [83.5,100],[83.5,60],[83.5,20],[83.5,-20],[83.5,-48],[64,-41]];                           // East Avenue + Barn
+  [83.5,100],[83.5,60],[83.5,20],[83.5,-20],[83.5,-48],[64,-41],                             // East Avenue + Barn
+  [-6.6,-103.8],[-1.6,-141.2]];                                                              // the bridge ends
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
