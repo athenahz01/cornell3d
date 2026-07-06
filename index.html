@@ -1834,6 +1834,7 @@ function mansard(cx,cy,cz,w,d,color,trim){                 // Second Empire roof
   B.box(160,by+30.3,62,11.5,0.6,11.5,0x54371f);
 }
 window.__routes.sage=[[-27,70],[-24.6,74],[-21,74],[-14,74],[-14,69],[-16.5,68],[-18.6,67.6],[-18.6,65],[-19.5,63.4]];
+window.__routes.slope=[[-31.6,4],[-31.6,40],[-34,45.2],[-50,45.5],[-70,45.5],[-79,44],[-86,26],[-100,14]];
 window.__routes.johnson=[[-52,-30],[-55,-44],[-57,-49.4],[-62,-51],[-68,-54]];
 window.__routes.bridge=[[-4,-100],[-4,-104.3],[-4,-108],[-4,-114],[-4,-122],[-4,-130],[-4,-137],[-4,-141.4],[-4,-144.5]];
 { // WS1 paint
@@ -1843,6 +1844,57 @@ window.__routes.bridge=[[-4,-100],[-4,-104.3],[-4,-108],[-4,-114],[-4,-122],[-4,
     {g2.beginPath();g2.arc(gx(px),gz(pz),gs(r),0,7);g2.fill();}
   path([[-4,-98],[-4,-103.5]],2.2);path([[-4,-142.5],[-4,-148]],2.2);
   groundTex.needsUpdate=true;
+}
+/* ============================== WS2: EXTERIOR FIDELITY ============================== */
+{
+  // McGraw Tower: stringcourse, clock surrounds, belfry louvres
+  B.box(-52,25.55,-6,11.6,0.5,11.6,0xc6b89a);
+  for(const s of[-1,1]){B.box(-52,28.4,-6+s*5.56,4.9,4.9,0.1,0x241f1a);
+    B.box(-52+s*5.56,28.4,-6,0.1,4.9,4.9,0x241f1a);}
+  for(let ly=32.6;ly<=36;ly+=0.7)for(const s of[-1,1])
+    B.box(-52+s*5.28,ly,-6,0.16,0.26,5.6,0x241f1a);
+  // Uris Library: the rounded west apse bay
+  B.cyl(-77,4,30,5,5.4,16,12,0xb0a183,{solid:true});
+  B.cyl(-77,13.4,30,0.15,5.6,3.2,12,0x6b3a2c);
+  for(let k=0;k<5;k++){const a=Math.PI*(0.55+0.225*k);
+    pane(-77+Math.cos(a)*5.12,6.6,30+Math.sin(a)*5.12,1.3,3.4,Math.PI/2-a);}
+  B.box(-77,10.6,30,10.6,0.5,10.6,0xc6b89a);
+  // Old Stone Row: iron cresting + entry steps
+  for(const cz of[-38,-16,2]){
+    B.box(-67,15.05,cz,10.5,0.22,0.14,0x2a2620);
+    for(const dz of[-4,0,4])B.cyl(-67,15.35,cz+dz,0.02,0.06,0.5,4,0x2a2620);
+    B.box(-59.1,0.12,cz,0.9,0.24,3,0x9b917d,{solid:true});}
+  // Sibley: drum portholes + arcaded ground hint
+  for(let k=0;k<6;k++){const a=k/6*Math.PI*2;
+    B.box(Math.cos(a)*5.06,13.1,-59+Math.sin(a)*5.06,0.55,0.55,0.2,0xffd9a0,{ry:Math.PI/2-a,ch:'glowNight'});}
+  for(let px=-25;px<=25;px+=3.4)B.box(px,1.9,-51.88,0.55,3.8,0.18,0xdcd6c4);
+  // Goldwin Smith: frieze lettering strip
+  B.box(47.88,7.18,-7,0.12,0.55,11,0x241f1a);
+  // Willard Straight: carved figures, window lattices, twin finials
+  for(const dz of[-1.3,0,1.3])B.box(-47.32,5.35,60+dz,0.32,1.05,0.72,0xcfc4a8);
+  for(let k=0;k<6;k++){const wz=60+(k-2.5)*3.6;
+    B.box(-74.18,3.6,wz,0.07,3.1,0.1,0x241f1a);
+    for(const dz of[-0.5,0.5])B.box(-74.18,3.6,wz+dz,0.07,3.1,0.08,0x241f1a);
+    B.box(-74.18,3.6,wz,0.07,0.08,1.5,0x241f1a);B.box(-74.18,4.6,wz,0.07,0.08,1.5,0x241f1a);}
+  for(const dz of[-8,8])B.cyl(-61,13.6,60+dz,0.05,0.3,1.6,5,0xcfc4a8);
+  // Myron Taylor: cloister arcade on the courtyard + gothic entrance arch
+  for(let px=-70;px<=-48;px+=2.6)B.box(px,1.5,106.9,0.55,3,0.55,0x8d8272,{solid:true});
+  B.box(-59,3.15,106.9,24,0.4,0.9,0xcfc4a8);
+  B.box(-59,3.6,107.35,24.6,0.5,1.8,0x4c4f58);
+  B.box(-46,4.0,89.6,3.4,0.9,0.7,0xcfc4a8);B.box(-46,3.6,89.5,2.9,0.5,0.6,0x8d8272);
+  B.box(-46,4.6,89.7,2.4,0.5,0.5,0xcfc4a8);
+  // Gates: diagonal seams + one more folded plane
+  for(const[sx,sy,r]of[[64,7,0.7],[70,5.5,-0.65],[76,8,0.72],[67,10,-0.7]])
+    B.box(sx,sy,94.92,4.6,0.16,0.1,0x878d94,{rz:r});
+  B.box(60.4,6.5,108,10,10,0.5,0xb2b8be,{ry:-0.15});
+  // Barton: east face lancets
+  for(let pz=34;pz<=58;pz+=4.8){B.box(118.1,6,pz,0.2,7,1.4,0x241f1a);
+    B.box(118.12,6,pz,0.24,6.6,1.1,0xffd9a0,{ch:'glowNight'});}
+  // Bailey: entablature band
+  B.box(86.2,6.9,-32,3.9,0.35,16.8,0xb9b2a0);
+  // Duffield: rooftop mechanical block
+  B.box(49,14.1,146,8,2.4,6,0x878d94);
+  for(let k=0;k<4;k++)B.box(45.05,14.1,144+k*1.3,0.12,1.6,0.7,0x6a7078);
 }
 /* ============================== POLISH: PLINTHS, IVY, LIFE ============================== */
 {
