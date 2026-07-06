@@ -1955,6 +1955,30 @@ function mkText(txt,w,h,bg,fg,fs){                     // small lettered plane
 }
 window.__routes.towerRd=[[16,26.8],[40,26.8],[70,26.8],[79,26],[88,25.2],[100,25.2]];
 window.__routes.lawSchool=[[-26,88],[-33,86],[-40,86.5],[-45.8,88],[-46,91.5],[-46,88.2],[-42,86.8],[-37,88.5],[-37,96],[-37,102],[-41.5,104],[-48,104.5],[-52,103.5]];
+/* ============================== WS4B: PLAQUES + PUMPKIN ============================== */
+{
+  const plaque=(txt,x,y,z,ry,w=2.2)=>{B.box(x,y,z,ry?0.14:w+0.3,0.5,ry?w+0.3:0.14,0xcfc4a8);
+    const t=mkText(txt,w,0.34,'#cfc4a8','#33281c');
+    t.position.set(x+(ry?(ry>0?0.09:-0.09):0),y,z+(ry?0:0.09));
+    if(ry)t.rotation.y=ry>0?Math.PI/2:-Math.PI/2;};
+  plaque('WILLARD STRAIGHT HALL',-47.3,4.9,55.4,-1,2.6);
+  plaque('SAGE CHAPEL',-22.6,4.6,70.5,1,2.0);
+  plaque('BARNES HALL',-9.9,5.2,96.4,1,1.9);
+  plaque('ANABEL TAYLOR HALL',-34.4,4.5,108.6,1,2.3);
+  plaque('OLIN LIBRARY',-17,4.4,43.85,0,2.0);
+  plaque('DUFFIELD HALL',33.85,4.6,136.4,1,2.1);
+  plaque('BARTON HALL',83.9,5.2,42,1,2.0);
+  plaque('DAY HALL',83.4,5.0,8.6,1,1.7);
+  plaque('BAILEY HALL',112,7.4,20.55,0,1.9);
+  plaque('THE BIG RED BARN',67.94,3.05,-52.2,0,2.0);
+  // the pumpkin, October 1997, no explanation
+  window.__pumpkin=new THREE.Mesh(new THREE.SphereGeometry(0.34,9,7),
+    new THREE.MeshStandardMaterial({color:0xd8731f,roughness:0.7}));
+  window.__pumpkin.scale.y=0.78;window.__pumpkin.position.set(-52,47.9,-6);
+  const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.07,0.22,5),
+    new THREE.MeshStandardMaterial({color:0x4a5226}));
+  stem.position.y=0.32;window.__pumpkin.add(stem);scene.add(window.__pumpkin);
+}
 /* ============================== WS3B: THE LAW SCHOOL FRONT ============================== */
 {
   const LIME=0xcfc4a8,NZ=90;
@@ -2430,6 +2454,13 @@ function step(fdt){
     l.m.rotation.set(T*2.2+l.ph,T*1.6,T*2.8+l.ph*3);}
   glitter.material.opacity=gold*0.4*(1-ug);glitter.material.color.copy(asCol(PAL.sun));
   avia.visible=(T%1.6)<0.8&&glowF>0.15;
+  if(window.__pumpkin)window.__pumpkin.visible=dayT>0.55&&dayT<0.95;
+  { let nearK=false;
+    for(const[kx,kz]of[[-24,56],[8,12],[26,150]])
+      if((P.pos.x-kx)**2+(P.pos.z-kz)**2<4.6){nearK=true;break;}
+    const h2=document.getElementById('hint');
+    if(nearK&&!mapOn&&h2.dataset.k!=='1'){h2.dataset.k='1';h2.textContent='press M for the map';h2.style.opacity=0.95;}
+    else if(!nearK&&h2.dataset.k==='1'){h2.dataset.k='';h2.style.opacity=0;}}
   if(fdt===undefined){if(FXMODE==='none')renderer.render(scene,camera);else composer.render();}
 }
 /* ============================== DEBUG / VERIFY API ============================== */
@@ -2504,6 +2535,14 @@ const mapOff=document.createElement('canvas');mapOff.width=1400;mapOff.height=14
   m.lineWidth=5;line([[26,121],[26,143]]);line([[-37,90],[-37,118]]);
   line([[-66,4],[-96,14],[-140,22],[-178,-2]]);line([[-4,-98],[-4,-146]]);
   line([[0,-48],[-8.5,-58],[-4,-70],[8,-74]]);line([[22,150],[-5,157],[-5,185]]);
+  m.strokeStyle='#8a8274';m.lineWidth=8;                                // the streets
+  line([[10,24],[200,24]]);line([[81,-56],[81,118]]);
+  line([[-42,44],[-42,84],[-58,89],[-72,94],[-77,112],[-77,150],[-52,170],[-30,181],[-24,189]]);
+  m.fillStyle='#5a5142';
+  for(const[jx,jz]of[[81,24],[81,121],[-74,121],[147,24]]){m.beginPath();
+    m.arc(w2mx(jx),w2my(jz),4,0,7);m.fill();}
+  m.strokeStyle='#9c9483';m.lineWidth=7;                                // Schoellkopf crescent
+  m.beginPath();m.arc(w2mx(85),w2my(238),24*MAPS3,Math.PI*0.08,Math.PI*0.92);m.stroke();
   for(const[a,b,c,d]of BRECTS){m.fillStyle='#c9bfae';m.strokeStyle='#8a7f6d';m.lineWidth=1;
     m.fillRect(w2mx(a),w2my(b),(c-a)*MAPS3,(d-b)*MAPS3);
     m.strokeRect(w2mx(a),w2my(b),(c-a)*MAPS3,(d-b)*MAPS3);}
@@ -2585,6 +2624,17 @@ Object.assign(window.__demo,{
   mapOpen:()=>openMap(),mapClose:()=>closeMap(false),
   mapTeleport(name){const s=MAP_SPAWNS.find(v=>v.name===name);if(s)mapGoto(s);return !!s;},
   heading});
+{ // you-are-here kiosks on the three quads
+  const mt=new THREE.CanvasTexture(mapOff);mt.colorSpace=THREE.SRGBColorSpace;
+  const km=new THREE.MeshStandardMaterial({color:0x3c2c1e});
+  for(const[kx,kz]of[[-24,56],[8,12],[26,150]]){const ky=terrainH(kx,kz);
+    const post=new THREE.Mesh(new THREE.BoxGeometry(0.18,1.1,0.18),km);
+    post.position.set(kx,ky+0.55,kz);scene.add(post);
+    const top=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.3),
+      new THREE.MeshBasicMaterial({map:mt}));
+    top.position.set(kx,ky+1.3,kz);top.rotation.x=-1.05;scene.add(top);
+    addSolid(kx,ky+0.7,kz,0.5,1.4,0.5);}
+}
 animate();
 </script>
 </body>
