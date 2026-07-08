@@ -910,6 +910,10 @@ function stained(x,y,z,w,h,ry,seed){
   for(let x=-10;x<=26;x+=6)gwin(x,6,Z1+0.12,2,5.4,0);             // tall south windows
   for(let x=-10;x<=26;x+=6)gwin(x,7.5,Z0-0.12,1.6,3.4,0);
   gwin(X1+0.12,6.5,MZ,2.4,4.6,Math.PI/2);
+  for(let x=-10;x<=26;x+=6){                                       // interior faces of the glass
+    B.box(x,6,Z1-1.06,1.8,5.0,0.1,0xdfc292,{ch:'glowNight'});
+    B.box(x,7.5,Z0+1.06,1.4,3.0,0.1,0xdfc292,{ch:'glowNight'});}
+  B.box(X1-1.06,6.5,MZ,0.1,4.2,2.2,0xdfc292,{ch:'glowNight'});
   B.box(MX,4.35,Z1+0.15,3.6,1.5,0.7,TRIM);
   B.box(MX-1.9,2.2,Z1+0.4,0.5,4.4,0.8,TRIM,{solid:true});B.box(MX+1.9,2.2,Z1+0.4,0.5,4.4,0.8,TRIM,{solid:true});
   B.box(MX,0.1,Z1+1.3,5.4,0.2,2.2,0x9b917d,{solid:true});         // entry steps
@@ -923,7 +927,7 @@ function stained(x,y,z,w,h,ry,seed){
     for(let x=-3;x<=25;x+=7)B.box(x,0.45,tz,0.9,0.85,1.3,0x33261a);
     for(const bz of[-1.35,1.35])B.box(11,0.5,tz+bz,31,0.08,0.42,0x5a4530,{solid:true});
     for(let x=-2;x<=24;x+=4.5){B.cyl(x,1.12,tz,0.05,0.07,0.22,5,0x8a6b30);
-      B.box(x,1.32,tz,0.08,0.16,0.08,0xffc36a,{ch:'glowAlways'});} // candlesticks
+      B.box(x,1.36,tz,0.13,0.24,0.13,0xffc36a,{ch:'glowAlways'});} // candlesticks
   }
   // hearth on north wall
   B.box(20,1.9,Z0+1.2,5,3.8,1.6,0x655c50,{solid:true});
@@ -946,7 +950,7 @@ function stained(x,y,z,w,h,ry,seed){
     B.cyl(cx,6.2,MZ,0.9,0.9,0.14,10,0x241d14);
     B.cyl(cx,7.9,MZ,0.02,0.02,3.4,4,0x241d14);
     for(let k=0;k<6;k++){const a=k/6*Math.PI*2;
-      B.box(cx+Math.cos(a)*0.8,6.45,MZ+Math.sin(a)*0.8,0.09,0.22,0.09,0xffc36a,{ch:'glowAlways'});}}
+      B.box(cx+Math.cos(a)*0.8,6.45,MZ+Math.sin(a)*0.8,0.14,0.3,0.14,0xffc36a,{ch:'glowAlways'});}}
 }
 /* ============================== THE STEAM TUNNELS ============================== */
 // Network: hut A (26,16) â†’ stair down east â†’ leg1 south (xâ‰ˆ34, z 17.2â†’28.8)
@@ -2327,6 +2331,8 @@ const PL=[
   plight(40,5,132,0xffd9a0,30,22), plight(40,5,148,0xffd9a0,30,22), // Duffield atrium, open all night
   plight(75,2.6,-49,0xffc98a,18,13,{fl:0.12}),                      // the Big Red Barn
   plight(66.2,3.1,-48,0xffd27a,14,13,{fl:0.08}),                    // the beer-garden strings
+  plight(20,2.2,-89,0xff9a4a,20,16,{fl:0.30}),                      // Risley: the hearth
+  plight(8,5.2,-84,0xffc98a,14,24,{fl:0.06}),                       // Risley: candlelit hall
   plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'}), plight(0,4.2,0,0xffd9a0,0,15,{mode:'lamp'})];
 
 /* ============================== SHAFTS / BIRDS / LEAVES ============================== */
