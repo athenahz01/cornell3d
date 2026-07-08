@@ -1829,8 +1829,11 @@ function mansard(cx,cy,cz,w,d,color,trim){                 // Second Empire roof
   B.box(30,11,49,7,9,7,BR,{solid:true});                             // corner tower
   B.cyl(30,17.8,49,0.12,4.6,4.4,4,SL,{ry:Math.PI/4});                // pyramidal cap
   for(const fy of[2.8,6.4,10.2]){paneRow(26.9,fy,MZ,Math.PI/2,5,5.2,1.6,2.4);
-    paneRow(MX,fy,45.9,0,3,4.4,1.6,2.4);}
-  for(let k=0;k<5;k++)B.box(26.94,4.4,48.6+k*5.2,0.14,0.4,2.0,CR);   // arched hoods
+    paneRow(MX,fy,45.9,0,3,4.4,1.6,2.4);
+    paneRow(45.1,fy,MZ,Math.PI/2,5,5.2,1.6,2.4);                     // East Avenue face
+    paneRow(MX,fy,78.1,0,3,4.4,1.6,2.4);}                            // south face
+  for(let k=0;k<5;k++){B.box(26.94,4.4,48.6+k*5.2,0.14,0.4,2.0,CR);  // arched hoods
+    B.box(45.06,4.4,48.6+k*5.2,0.14,0.4,2.0,CR);}
   B.box(26.9,2.2,62,0.2,2.6,10,0xd8bf92,{ch:'glowNight'});           // atrium strip at dusk
   B.box(26.7,1.9,68,2.8,3.8,0.9,CR,{solid:true});B.box(26.5,1.75,68,0.5,3.4,1.9,0x241f1a);
   plinth(27,46,45,78,0x5c2c22);
