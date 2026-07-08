@@ -2241,6 +2241,8 @@ moonSpr.scale.setScalar(52);scene.add(moonSpr);
 const glitter=new THREE.Mesh(new THREE.PlaneGeometry(220,26),
   new THREE.MeshBasicMaterial({color:0xffb46a,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
 glitter.rotation.x=-Math.PI/2;glitter.position.set(-320,-24.3,-15);scene.add(glitter);
+const beebeGlit=new THREE.Mesh(new THREE.PlaneGeometry(84,24),glitter.material);
+beebeGlit.rotation.x=-Math.PI/2;beebeGlit.position.set(67,-6.7,-131);scene.add(beebeGlit);
 const avia=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),
   new THREE.MeshBasicMaterial({color:0xff2222}));
 avia.position.set(65,26.9,50);scene.add(avia);                       // aviation beacon, Statler tower
