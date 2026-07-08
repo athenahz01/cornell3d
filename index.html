@@ -1601,10 +1601,19 @@ function plinth(x0,z0,x1,z1,c=0x6b6353,door){    // dark foundation course, opti
   B.box(66,4,60,24,8,24,LIME,{solid:true});                                 // academic base
   B.box(66,9,60,24.2,2,24.2,0x8a4636);                                      // brick top floor
   paneRow(66,3.2,47.9,0,6,3.6,1.6,2.2);paneRow(66,9,47.9,0,6,3.6,1.5,1.6,'glowNight');
+  paneRow(78.15,3.2,60,Math.PI/2,6,3.6,1.6,2.2);                            // East Avenue front
+  paneRow(78.25,9,60,Math.PI/2,6,3.6,1.5,1.6,'glowNight');
+  paneRow(66,3.2,72.1,0,6,3.6,1.6,2.2);                                     // Campus Road side
+  paneRow(66,9,72.25,0,6,3.6,1.5,1.6,'glowNight');
+  paneRow(53.85,3.2,60,Math.PI/2,6,3.6,1.6,2.2);                            // west face
   const TX=65,TZ2=50;                                                        // the tower
   B.box(TX,13,TZ2,10,26,8,LIME,{solid:true});
-  for(let fy=11;fy<25;fy+=2.6)for(const dx of[-3.2,-1.1,1.1,3.2])
-    B.box(TX+dx,fy,TZ2-4.06,1.4,1.7,0.14,0xffd9a0,{ch:'glowNight'});        // lit hotel grid
+  for(let fy=11;fy<25;fy+=2.6){
+    for(const dx of[-3.2,-1.1,1.1,3.2]){
+      B.box(TX+dx,fy,TZ2-4.06,1.4,1.7,0.14,0xc9a468,{ch:'glowNight'});      // lit hotel grid, north
+      B.box(TX+dx,fy,TZ2+4.06,1.4,1.7,0.14,0xc9a468,{ch:'glowNight'});}     // and south
+    for(const dz of[-2.7,-0.9,0.9,2.7])
+      B.box(TX+5.06,fy,TZ2+dz,0.14,1.7,1.3,0xc9a468,{ch:'glowNight'});}     // East Ave face
   B.box(TX,26.2,TZ2,10.5,0.5,8.5,0xc4bda8);
 }
 { // Barton Hall: the castle, now enterable
