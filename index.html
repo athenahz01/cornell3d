@@ -2182,7 +2182,7 @@ window.__routes.cascadilla=[[22,150],[4,152],[-5,157],[-5,184],[-5,188],[-5,191]
 window.__routes.engQuad=[[-26,86],[-37,91],[-37,118],[-24,121],[10,121],[26,123],[26,143],[24,147]];
 window.__routes.duffield=[[24,147],[26,143],[32,140],[36.5,140],[40,140],[40,133],[38.5,130.5]];
 window.__routes.gates=[[26,123],[30,121],[30,103],[57,103],[57,95],[58.5,91.5],[66,91],[71,92.2],[71,97],[70,103]];
-window.__routes.hoPlaza=[[0,40],[-14,44],[-26,58],[-27,72],[-26,86]];
+window.__routes.hoPlaza=[[0,40],[-14,42],[-32,45],[-31,58],[-28,72],[-26,86]];
 window.__routes.straight=[[-26,60],[-40,60],[-46,60],[-52,60],[-58,60]];
 window.__routes.gould=[[-26,86],[-38,87.5],[-46,88.4],[-46,91.8],[-50,92.6],[-58,92.6]];
 window.__routes.anabel=[[-26,86],[-37,91],[-37,109],[-35.5,112],[-31,112],[-24,112]];
@@ -2456,7 +2456,7 @@ function step(fdt){
   avia.visible=(T%1.6)<0.8&&glowF>0.15;
   if(window.__pumpkin)window.__pumpkin.visible=dayT>0.55&&dayT<0.95;
   { let nearK=false;
-    for(const[kx,kz]of[[-24,56],[8,12],[26,150]])
+    for(const[kx,kz]of[[-35,50],[8,12],[26,150]])
       if((P.pos.x-kx)**2+(P.pos.z-kz)**2<4.6){nearK=true;break;}
     const h2=document.getElementById('hint');
     if(nearK&&!mapOn&&h2.dataset.k!=='1'){h2.dataset.k='1';h2.textContent='press M for the map';h2.style.opacity=0.95;}
@@ -2487,10 +2487,10 @@ const MAP_SPAWNS=[
  {name:'The Steam Tunnels',x:26,z:16,spawn:[21,0.2,16,-Math.PI/2]},
  {name:'Ho Plaza',x:-30,z:66,spawn:[-27,0.2,60,Math.PI]},
  {name:'Willard Straight Hall',x:-61,z:60,spawn:[-44,0.2,60,Math.PI/2]},
- {name:'The Gould Reading Room',x:-57,z:95,spawn:[-46,0.2,87.5,Math.PI]},
- {name:'Anabel Taylor Hall',x:-23,z:104,spawn:[-37,0.2,112,-Math.PI/2]},
+ {name:'The Gould Reading Room',x:-57,z:95,ldy:24,spawn:[-46,0.2,87.5,Math.PI]},
+ {name:'Anabel Taylor Hall',x:-23,z:104,ldy:24,spawn:[-37,0.2,112,-Math.PI/2]},
  {name:'Duffield Atrium',x:46,z:140,spawn:[31,0.2,140,-Math.PI/2]},
- {name:'The Engineering Quad',x:22,z:147,spawn:[26,0.2,143,0.5]},
+ {name:'The Engineering Quad',x:22,z:147,ldy:24,spawn:[26,0.2,143,0.5]},
  {name:'Gates Hall',x:71,z:105,spawn:[71,0.2,91,Math.PI]},
  {name:'Cascadilla Gorge',x:-2,z:194,spawn:[-5,0.2,183,Math.PI]},
  {name:'The Big Red Barn',x:74,z:-49,spawn:[65.3,0.2,-48.6,-Math.PI/2]},
@@ -2555,8 +2555,9 @@ const mapOff=document.createElement('canvas');mapOff.width=1400;mapOff.height=14
   m.strokeStyle='#f4ecd8';m.lineWidth=4;m.lineJoin='round';
   for(const s of MAP_SPAWNS){m.fillStyle='#b31b1b';
     m.beginPath();m.arc(w2mx(s.x),w2my(s.z),6,0,7);m.fill();
-    m.strokeText(s.name.toUpperCase(),w2mx(s.x),w2my(s.z)-11);
-    m.fillStyle='#5a5142';m.fillText(s.name.toUpperCase(),w2mx(s.x),w2my(s.z)-11);}
+    const ly=w2my(s.z)+(s.ldy||-11);
+    m.strokeText(s.name.toUpperCase(),w2mx(s.x),ly);
+    m.fillStyle='#5a5142';m.fillText(s.name.toUpperCase(),w2mx(s.x),ly);}
   const cx=1310,cy=190;                                                 // compass rose
   m.strokeStyle='#8a7f6d';m.lineWidth=2;m.beginPath();m.arc(cx,cy,36,0,7);m.stroke();
   m.fillStyle='#b31b1b';m.beginPath();m.moveTo(cx,cy-30);m.lineTo(cx-8,cy+6);m.lineTo(cx+8,cy+6);m.closePath();m.fill();
@@ -2627,11 +2628,11 @@ Object.assign(window.__demo,{
 { // you-are-here kiosks on the three quads
   const mt=new THREE.CanvasTexture(mapOff);mt.colorSpace=THREE.SRGBColorSpace;
   const km=new THREE.MeshStandardMaterial({color:0x3c2c1e});
-  for(const[kx,kz]of[[-24,56],[8,12],[26,150]]){const ky=terrainH(kx,kz);
+  for(const[kx,kz]of[[-35,50],[8,12],[26,150]]){const ky=terrainH(kx,kz);
     const post=new THREE.Mesh(new THREE.BoxGeometry(0.18,1.1,0.18),km);
     post.position.set(kx,ky+0.55,kz);scene.add(post);
     const top=new THREE.Mesh(new THREE.PlaneGeometry(1.3,1.3),
-      new THREE.MeshBasicMaterial({map:mt}));
+      new THREE.MeshStandardMaterial({map:mt,roughness:1}));
     top.position.set(kx,ky+1.3,kz);top.rotation.x=-1.05;scene.add(top);
     addSolid(kx,ky+0.7,kz,0.5,1.4,0.5);}
 }
