@@ -487,7 +487,7 @@ const LAMPS=[];
   [83.5,100],[83.5,60],[83.5,20],[83.5,-20],[83.5,-48],[64,-41],                             // East Avenue + Barn
   [-6.6,-103.8],[-1.6,-141.2],                                                               // the bridge ends
   [20,28.6],[60,28.6],[110,28.6],[150,28.6],                                                 // Tower Road
-  [-44.6,60],[-44.6,84],[-74,132],[-74,152],[-44,175]];                                      // Central Avenue
+  [-44.6,66],[-44.6,84],[-74,132],[-74,152],[-44,175]];                                      // Central Avenue
  for(const[x,z]of spots){const y=terrainH(x,z);LAMPS.push({x,y,z});
    B.cyl(x,y+2.0,z,0.07,0.1,4.0,6,0x22252c,{solid:true});
    B.cyl(x,y+0.25,z,0.22,0.3,0.5,6,0x22252c);
@@ -2209,6 +2209,45 @@ const avia=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.5,0.5),
   new THREE.MeshBasicMaterial({color:0xff2222}));
 avia.position.set(65,26.9,50);scene.add(avia);                       // aviation beacon, Statler tower
 
+/* ============================== STREET LIFE: TREES, BIKES, HYDRANTS, SIDEWALKS ============================== */
+{
+  // sidewalk bands flanking the streets, segmented so they do not cross the asphalt
+  const walk=pts=>{g2.strokeStyle='#b0a893';g2.lineWidth=gs(1.5);g2.lineCap='round';
+    g2.beginPath();g2.moveTo(gx(pts[0][0]),gz(pts[0][1]));
+    for(let k=1;k<pts.length;k++)g2.lineTo(gx(pts[k][0]),gz(pts[k][1]));g2.stroke();};
+  walk([[10,19.6],[76,19.6]]);walk([[86.4,19.6],[200,19.6]]);      // Tower Rd north
+  walk([[10,28.4],[76,28.4]]);walk([[86.4,28.4],[200,28.4]]);      // Tower Rd south
+  walk([[76.6,-56],[76.6,19]]);walk([[76.6,29],[76.6,114]]);       // East Ave west
+  walk([[85.4,-52],[85.4,19]]);walk([[85.4,29],[85.4,114]]);       // East Ave east
+  groundTex.needsUpdate=true;
+  // street tree rows, no solids, pruned against footprints, junctions, doors, the bus stop
+  const spots=[];
+  for(let x=26;x<=196;x+=17)if(x<72||x>92)spots.push([x+rnd(-2,2),18.4+rnd(-0.8,0.8)]);
+  for(let x=34;x<=196;x+=23)if(x<72||x>92)spots.push([x+rnd(-2,2),30+rnd(-0.8,0.8)]);
+  for(let z=-48;z<=108;z+=21)if((z<14||z>34)&&(z<38||z>48))spots.push([75.4+rnd(-1,1),z]);
+  for(let z=-38;z<=104;z+=26)if((z<8||z>16)&&(z<34||z>46))spots.push([86.8+rnd(-1,1),z]);
+  for(const[tx,tz]of spots)if(!inBuilding(tx,tz))tree(tx,tz);
+  // parked bicycles at busy doors: two wheels, tubes, bars; one solid per rack
+  const bike=(x,z,alongX)=>{const y=terrainH(x,z),W=alongX?{rx:Math.PI/2}:{rz:Math.PI/2};
+    const dx=alongX?0.62:0,dz=alongX?0:0.62;
+    for(const s of[-1,1])B.cyl(x+dx*s,y+0.34,z+dz*s,0.32,0.32,0.05,10,0x23262b,W);
+    B.box(x,y+0.62,z,alongX?1.05:0.05,0.05,alongX?0.05:1.05,0x8a2a20);
+    B.box(x-dx*0.95,y+0.92,z-dz*0.95,alongX?0.06:0.5,0.05,alongX?0.5:0.06,0x23262b);
+    B.box(x+dx*0.55,y+0.85,z+dz*0.55,0.16,0.05,0.16,0x3a2c1e);};
+  const rack=(x,z,alongX,n)=>{for(let k=0;k<n;k++)bike(x+(alongX?0:k*0.9),z+(alongX?k*0.9:0),alongX);
+    addSolid(x+(alongX?0:(n-1)*0.45),0.6,z+(alongX?(n-1)*0.45:0),
+      alongX?2.3:(n-1)*0.9+0.8,1.2,alongX?(n-1)*0.9+0.8:2.3);};
+  rack(75.2,12,false,3);            // Day Hall, across East Ave from the west door
+  rack(46,-3,false,3);              // Goldwin Smith, south of the portico steps
+  rack(-46.6,53,true,2);            // the Straight, north of the entry
+  rack(28,137.5,false,3);           // Duffield, edge of the engineering green
+  // fire hydrants at the junction corners
+  for(const[hx,hz]of[[76.6,19.4],[85.6,115.6],[-46.2,116],[19,28.7],[76.8,45.8]]){
+    const y=terrainH(hx,hz);
+    B.cyl(hx,y+0.3,hz,0.13,0.16,0.6,7,0x9c2418);
+    B.sph(hx,y+0.64,hz,0.13,0x9c2418);
+    B.cyl(hx,y+0.45,hz,0.05,0.05,0.5,5,0x7a1c12,{rz:Math.PI/2});}
+}
 /* ============================== MATERIALS / FLUSH ============================== */
 const matMain=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.93,metalness:0.02,side:THREE.DoubleSide});
 const matGlowN=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide});
